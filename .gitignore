@@ -1,2 +1,7 @@
 /cache/
 /out/
+/node_modules/
+/hh_cache/
+/hh_out/
+/typechain/
+/.openzeppelin/
