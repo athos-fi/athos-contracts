@@ -317,7 +317,7 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         }
 
         ICollateralSystem(collateralSystemAddr).collateralFromUnlockReward(
-            user, rewarderAddress, "CHAOS", rewardEntry.amount
+            user, rewarderAddress, "ATH", rewardEntry.amount
         );
 
         lockedAmountByAddresses[user] =

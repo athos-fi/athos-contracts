@@ -33,7 +33,7 @@ contract CollateralSystem is
     IRewardLocker public mRewardLocker;
 
     bytes32 public constant Currency_ETH = "ETH";
-    bytes32 public constant Currency_LINA = "CHAOS";
+    bytes32 public constant Currency_LINA = "ATH";
 
     // -------------------------------------------------------
     uint256 public uniqueId; // use log
@@ -530,7 +530,7 @@ contract CollateralSystem is
 
     function _redeemMax(address user, bytes32 _currency) private {
         require(
-            _currency == Currency_LINA, "CollateralSystem: only CHAOS is supported"
+            _currency == Currency_LINA, "CollateralSystem: only ATH is supported"
         );
         _Redeem(user, Currency_LINA, maxRedeemableLina(user));
     }
@@ -539,7 +539,7 @@ contract CollateralSystem is
         internal
     {
         require(
-            _currency == Currency_LINA, "CollateralSystem: only CHAOS is supported"
+            _currency == Currency_LINA, "CollateralSystem: only ATH is supported"
         );
         require(_amount > 0, "CollateralSystem: zero amount");
 

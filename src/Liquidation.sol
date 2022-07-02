@@ -365,7 +365,7 @@ contract Liquidation is OwnableUpgradeable {
             mark.marker,
             params.liquidator,
             params.lusdToBurn,
-            "CHAOS",
+            "ATH",
             totalFromStaked,
             totalFromLocked,
             rewards.markerReward,
@@ -388,7 +388,7 @@ contract Liquidation is OwnableUpgradeable {
         (uint256 stakedCollateral, uint256 lockedCollateral) =
             collateralSystem.getUserLinaCollateralBreakdown(user);
 
-        uint256 collateralPrice = oracleRouter.getPrice("CHAOS");
+        uint256 collateralPrice = oracleRouter.getPrice("ATH");
         uint256 collateralValue =
             stakedCollateral.add(lockedCollateral).multiplyDecimal(collateralPrice);
 
@@ -467,7 +467,7 @@ contract Liquidation is OwnableUpgradeable {
 
         if (amountFromStaked > 0) {
             collateralSystem.moveCollateral(
-                params.user, params.liquidator, "CHAOS", amountFromStaked
+                params.user, params.liquidator, "ATH", amountFromStaked
             );
         }
 
@@ -511,10 +511,10 @@ contract Liquidation is OwnableUpgradeable {
                 liquidatorRewardFromLocked.sub(liquidatorRewardFromStaked);
 
             collateralSystem.moveCollateral(
-                params.user, params.marker, "CHAOS", markerRewardFromStaked
+                params.user, params.marker, "ATH", markerRewardFromStaked
             );
             collateralSystem.moveCollateral(
-                params.user, params.liquidator, "CHAOS", liquidatorRewardFromStaked
+                params.user, params.liquidator, "ATH", liquidatorRewardFromStaked
             );
         }
 

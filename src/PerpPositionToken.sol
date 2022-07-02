@@ -43,7 +43,7 @@ contract PerpPositionToken is
 
     function __PerpPositionToken_init() public initializer {
         __Ownable_init();
-        __ERC721_init("Chaotic Perpetual Positions NFT", "CHAOTIC-PERP-POS");
+        __ERC721_init("Athos Perpetual Positions NFT", "ATHOS-PERP-POS");
     }
 
     function setMinter(address newMinter) external onlyOwner {
