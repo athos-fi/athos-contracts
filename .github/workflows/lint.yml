@@ -1,4 +1,4 @@
-name: Test
+name: Lint
 
 on:
   push:
@@ -13,11 +13,11 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  test-foundry:
+  formatter:
     strategy:
       fail-fast: true
 
-    name: Test with Foundry
+    name: Check with formatters
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -29,13 +29,18 @@ jobs:
         with:
           version: nightly
 
-      - name: Run Forge build
+      - name: Install prettier
         run: |
-          forge --version
-          forge build --sizes
-        id: build
+          yarn global add prettier
 
-      - name: Run Forge tests
+      - name: Check format with Forge
         run: |
-          forge test -vvv
-        id: test
+          # `forge fmt` bug causing error in this file
+          rm src/utilities/TransferHelper.sol
+          forge --version
+          forge fmt --check src
+          forge fmt --check test
+
+      - name: Check format with prettier
+        run: |
+          prettier --check .
