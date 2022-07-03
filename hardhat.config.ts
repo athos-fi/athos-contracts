@@ -8,6 +8,7 @@ const config: HardhatUserConfig = {
     cache: "hh_cache",
     artifacts: "hh_out",
     sources: "src",
+    tests: "hh_test",
   },
   networks: {},
   solidity: {

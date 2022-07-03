@@ -104,7 +104,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
     mapping(uint256 => Position) public positions;
 
     uint256 private constant UNIT = 10 ** 18;
-    bytes32 private constant LUSD = "cUSD";
+    bytes32 private constant LUSD = "aUSD";
 
     modifier onlyExchange() {
         require(msg.sender == address(exchange), "Perpetual: not exchange");

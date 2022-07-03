@@ -5,7 +5,9 @@ libs = ["lib"]
 
 remappings = [
   "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
-  "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/"
+  "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+  "@uniswap/v2-core/=node_modules/@uniswap/v2-core/",
+  "@uniswap/v2-periphery/=node_modules/@uniswap/v2-periphery/"
 ]
 
 optimizer_runs = 999999

@@ -44,7 +44,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
     mapping(bytes32 => OracleSettings) public oracleSettings;
     mapping(bytes32 => string) public linearCurrencyKeysToBandCurrencyKeys;
 
-    bytes32 public constant LUSD = "cUSD";
+    bytes32 public constant LUSD = "aUSD";
 
     uint8 public constant ORACLE_TYPE_CHAINLINK = 1;
     uint8 public constant ORACLE_TYPE_BAND = 2;
