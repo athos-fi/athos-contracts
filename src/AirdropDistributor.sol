@@ -10,6 +10,7 @@ contract AirdropDistributor is OwnableUpgradeable {
     using SafeCastUpgradeable for uint256;
 
     event Initialized(
+        uint256 startTime,
         uint256 deadline,
         uint256 unlockedPercentage,
         uint256 firstUnlockTime,
@@ -29,6 +30,7 @@ contract AirdropDistributor is OwnableUpgradeable {
         uint32 claimTime;
     }
 
+    uint256 public startTime;
     uint256 public deadline;
     uint256 public unlockedPercentage;
     uint256 public firstUnlockTime;
@@ -40,6 +42,7 @@ contract AirdropDistributor is OwnableUpgradeable {
     mapping(address => AirdropEntry) public airdropEntries;
 
     function __AirdropDistributor_init(
+        uint256 _startTime,
         uint256 _deadline,
         uint256 _unlockedPercentage,
         uint256 _firstUnlockTime,
@@ -54,7 +57,8 @@ contract AirdropDistributor is OwnableUpgradeable {
         __Ownable_init();
 
         require(
-            _deadline > block.timestamp, "AirdropDistributor: invalid deadline"
+            _deadline > block.timestamp && _startTime < _deadline,
+            "AirdropDistributor: invalid timestamps"
         );
         require(
             address(_rewardLocker) != address(0), "AirdropDistributor: zero address"
@@ -63,6 +67,7 @@ contract AirdropDistributor is OwnableUpgradeable {
             address(_token) != address(0), "AirdropDistributor: zero address"
         );
 
+        startTime = _startTime;
         deadline = _deadline;
         unlockedPercentage = _unlockedPercentage;
         firstUnlockTime = _firstUnlockTime;
@@ -72,6 +77,7 @@ contract AirdropDistributor is OwnableUpgradeable {
         token = _token;
 
         emit Initialized(
+            _startTime,
             _deadline,
             _unlockedPercentage,
             _firstUnlockTime,
@@ -125,6 +131,7 @@ contract AirdropDistributor is OwnableUpgradeable {
     }
 
     function claim(address recipient) external {
+        require(block.timestamp >= startTime, "AirdropDistributor: not started");
         require(
             block.timestamp < deadline, "AirdropDistributor: deadline reached"
         );

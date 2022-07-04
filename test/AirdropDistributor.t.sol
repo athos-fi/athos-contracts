@@ -14,6 +14,7 @@ contract AirdropDistributorTest is Test {
     MockRewardLocker rewardLocker;
     AirdropDistributor airdrop;
 
+    uint256 startTime;
     uint256 deadline;
     uint256 firstUnlockTime;
     uint256 unlockInterval;
@@ -28,6 +29,7 @@ contract AirdropDistributorTest is Test {
         payable(BOB).transfer(1_000 ether);
         payable(CHARLIE).transfer(1_000 ether);
 
+        startTime = block.timestamp + 100 days;
         deadline = block.timestamp + 365 days;
         firstUnlockTime = deadline + 1 days;
         unlockInterval = 1 days;
@@ -41,6 +43,7 @@ contract AirdropDistributorTest is Test {
 
         airdrop = new AirdropDistributor();
         airdrop.__AirdropDistributor_init(
+            startTime, // _startTime
             deadline, // _deadline
             10, // _unlockedPercentage
             firstUnlockTime, // _firstUnlockTime
@@ -68,6 +71,7 @@ contract AirdropDistributorTest is Test {
     function testInitializerCannotBeCalledAfterDeployment() public {
         vm.expectRevert(bytes("Initializable: contract is already initialized"));
         airdrop.__AirdropDistributor_init(
+            startTime, // _startTime
             deadline, // _deadline
             10, // _unlockedPercentage
             firstUnlockTime, // _firstUnlockTime
@@ -107,6 +111,8 @@ contract AirdropDistributorTest is Test {
     }
 
     function testTokenIsTransferredAndLockedOnClaim() public {
+        vm.warp(startTime);
+
         vm.expectEmit(true, true, true, true, address(athToken));
         emit Transfer(address(airdrop), address(ALICE), 10e18);
         vm.expectEmit(true, true, true, true, address(athToken));
@@ -130,6 +136,8 @@ contract AirdropDistributorTest is Test {
     }
 
     function testTheSameEntryCanOnlyBeClaimedOnce() public {
+        vm.warp(startTime);
+
         vm.prank(BOB);
         airdrop.claim(ALICE);
 
@@ -139,18 +147,35 @@ contract AirdropDistributorTest is Test {
     }
 
     function testCannotClaimWithoutAnEntry() public {
+        vm.warp(startTime);
+
         vm.expectRevert(bytes("AirdropDistributor: no token to claim"));
         vm.prank(BOB);
         airdrop.claim(CHARLIE);
     }
 
     function testEntryMarkedAsClaimedAfterClaiming() public {
+        vm.warp(startTime);
+
         vm.prank(BOB);
         airdrop.claim(ALICE);
 
         (, bool claimed, uint32 claimTime) = airdrop.airdropEntries(ALICE);
         assertEq(claimed, true);
         assertGt(claimTime, 0);
+    }
+
+    function canOnlyClaimAfterStartTime() public {
+        vm.warp(startTime - 1);
+
+        vm.expectRevert(bytes("AirdropDistributor: not started"));
+        vm.prank(ALICE);
+        airdrop.claim(ALICE);
+
+        vm.warp(startTime);
+
+        vm.prank(ALICE);
+        airdrop.claim(ALICE);
     }
 
     function testCanOnlyClaimBeforeDeadlineIsReached_1() public {
@@ -181,6 +206,8 @@ contract AirdropDistributorTest is Test {
     function testCanOnlyWithdrawRemainingTokensOnceDeadlineIsReached_1()
         public
     {
+        vm.warp(startTime);
+
         vm.prank(ALICE);
         airdrop.claim(ALICE);
 
@@ -193,6 +220,8 @@ contract AirdropDistributorTest is Test {
     function testCanOnlyWithdrawRemainingTokensOnceDeadlineIsReached_2()
         public
     {
+        vm.warp(startTime);
+
         vm.prank(ALICE);
         airdrop.claim(ALICE);
 
