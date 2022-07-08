@@ -58,11 +58,7 @@ contract RewardSystem is OwnableUpgradeable {
         return firstPeriodStartTime.add(periodId.sub(1).mul(PERIOD_LENGTH));
     }
 
-    function getPeriodEndTime(uint256 periodId)
-        public
-        view
-        returns (uint256)
-    {
+    function getPeriodEndTime(uint256 periodId) public view returns (uint256) {
         require(periodId > 0, "RewardSystem: period ID must be positive");
         return firstPeriodStartTime.add(periodId.mul(PERIOD_LENGTH));
     }

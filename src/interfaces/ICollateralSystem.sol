@@ -7,10 +7,7 @@ interface ICollateralSystem {
         view
         returns (uint256 staked, uint256 locked);
 
-    function IsSatisfyTargetRatio(address _user)
-        external
-        view
-        returns (bool);
+    function IsSatisfyTargetRatio(address _user) external view returns (bool);
 
     function GetUserTotalCollateralInUsd(address _user)
         external

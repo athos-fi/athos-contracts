@@ -96,9 +96,7 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
         }
     }
 
-    function _updateUserDebt(address _user, uint256 _debtProportion)
-        private
-    {
+    function _updateUserDebt(address _user, uint256 _debtProportion) private {
         userDebtState[_user].debtProportion = _debtProportion;
         userDebtState[_user].debtFactor = _lastSystemDebtFactor();
         emit UpdateUserDebtLog(

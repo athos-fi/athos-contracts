@@ -80,11 +80,7 @@ contract CollateralSystem is
      * `getFreeCollateralInUsd()` instead. This function is not removed since it's still
      * used by `LnBuildBurnSystem`.
      */
-    function MaxRedeemableInUsd(address _user)
-        public
-        view
-        returns (uint256)
-    {
+    function MaxRedeemableInUsd(address _user) public view returns (uint256) {
         return getFreeCollateralInUsd(_user);
     }
 

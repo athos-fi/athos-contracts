@@ -71,11 +71,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         (price, time) = _getPriceData(currencyKey);
     }
 
-    function isPriceStaled(bytes32 currencyKey)
-        external
-        view
-        returns (bool)
-    {
+    function isPriceStaled(bytes32 currencyKey) external view returns (bool) {
         if (currencyKey == LUSD) return false;
         (, uint256 time) = _getPriceData(currencyKey);
         return _isUpdateTimeStaled(time, getStalePeriodForCurrency(currencyKey));
@@ -116,10 +112,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         __Ownable_init();
     }
 
-    function setGlobalStalePeriod(uint256 newStalePeriod)
-        external
-        onlyOwner
-    {
+    function setGlobalStalePeriod(uint256 newStalePeriod) external onlyOwner {
         uint256 oldStalePeriod = globalStalePeriod;
         globalStalePeriod = newStalePeriod;
         emit GlobalStalePeriodUpdated(oldStalePeriod, newStalePeriod);
@@ -373,9 +366,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         // Exploits the `oracleAddress` field to store a 160-bit integer
         oracleSettings[currencyKey] = OracleSettings({
             oracleType: ORACLE_TYPE_TERMINAL_PRICE,
-            oracleAddress: address(
-                terminalPrice
-                )
+            oracleAddress: address(terminalPrice)
         });
 
         emit TerminalPriceOracleAdded(currencyKey, terminalPrice);

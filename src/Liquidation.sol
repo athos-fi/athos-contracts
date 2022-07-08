@@ -183,11 +183,8 @@ contract Liquidation is OwnableUpgradeable {
         );
 
         undercollateralizationMarks[user] = UndercollateralizationMark({
-            marker: msg
-                .sender,
-            timestamp: uint64(
-                block.timestamp
-                )
+            marker: msg.sender,
+            timestamp: uint64(block.timestamp)
         });
 
         emit PositionMarked(user, msg.sender);
@@ -326,8 +323,7 @@ contract Liquidation is OwnableUpgradeable {
                 WithdrawCollateralParams({
                     user: params.user,
                     liquidator: params.liquidator,
-                    collateralWithdrawalAmount: rewards
-                        .collateralWithdrawalAmount,
+                    collateralWithdrawalAmount: rewards.collateralWithdrawalAmount,
                     stakedCollateral: evalResult.stakedCollateral,
                     lockedCollateral: evalResult.lockedCollateral
                 }),

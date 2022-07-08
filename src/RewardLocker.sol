@@ -77,12 +77,7 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         _;
     }
 
-    function balanceOf(address user)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function balanceOf(address user) external view override returns (uint256) {
         return lockedAmountByAddresses[user];
     }
 

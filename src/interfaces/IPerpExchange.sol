@@ -6,8 +6,7 @@ interface IPerpExchange {
 
     function submitFees(uint256 positionId, uint256 amount) external;
 
-    function submitInsuranceFund(uint256 positionId, uint256 amount)
-        external;
+    function submitInsuranceFund(uint256 positionId, uint256 amount) external;
 
     function requestPositionMint(address to)
         external

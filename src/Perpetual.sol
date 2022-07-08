@@ -464,12 +464,11 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
             IERC721Upgradeable(address(positionToken)).ownerOf(positionId);
 
         (uint256 fees, uint256 underlyingPrice, uint256 liquidatorReward) =
-            positions[positionId]
-                .isLong
-            ?
-            _closeLongPosition(positionOwner, positionId, amount, positionOwner, true)
-            :
-            _closeShortPosition(positionOwner, positionId, amount, positionOwner, true);
+            positions[positionId].isLong
+            ? _closeLongPosition(positionOwner, positionId, amount, positionOwner, true)
+            : _closeShortPosition(
+                positionOwner, positionId, amount, positionOwner, true
+            );
 
         uint256 collateralizationRatioAfter =
             _calculateCollateralizationRatio(positionId);
@@ -486,9 +485,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
             exchange.insuranceFundHolder()
                 == address(0)
             ? 0
-            : liquidatorReward.mul(
-                insuranceFundContributionRatio
-            ).div(UNIT);
+            : liquidatorReward.mul(insuranceFundContributionRatio).div(UNIT);
         liquidatorReward = liquidatorReward.sub(insuranceContribution);
 
         if (liquidatorReward > 0) {

@@ -111,11 +111,7 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     }
 
     // build lUSD
-    function BuildAsset(uint256 amount)
-        external
-        whenNotPaused
-        returns (bool)
-    {
+    function BuildAsset(uint256 amount) external whenNotPaused returns (bool) {
         address user = msg.sender;
         return _buildAsset(user, amount);
     }
@@ -203,11 +199,7 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     }
 
     // burn
-    function BurnAsset(uint256 amount)
-        external
-        whenNotPaused
-        returns (bool)
-    {
+    function BurnAsset(uint256 amount) external whenNotPaused returns (bool) {
         address user = msg.sender;
         _burnAsset(user, user, amount);
         return true;

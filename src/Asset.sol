@@ -68,10 +68,7 @@ contract Asset is IAsset, ERC20Upgradeable, OwnableUpgradeable {
         _mint(account, amount);
     }
 
-    function burn(address account, uint256 amount)
-        external
-        onlyBurnAssetRole
-    {
+    function burn(address account, uint256 amount) external onlyBurnAssetRole {
         _burn(account, amount);
     }
 

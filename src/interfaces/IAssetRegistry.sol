@@ -9,10 +9,7 @@ interface IAssetRegistry {
 
     function perpAddresses(bytes32 symbol) external view returns (address);
 
-    function perpSymbols(address perpAddress)
-        external
-        view
-        returns (bytes32);
+    function perpSymbols(address perpAddress) external view returns (bytes32);
 
     function isPerpAddressRegistered(address perpAddress)
         external

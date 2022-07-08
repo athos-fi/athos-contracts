@@ -173,17 +173,13 @@ contract UniswapCheckpoints is IUniswapCheckpoints, OwnableUpgradeable {
                     // Base token is token0
                     // counterfactual
                     priceCumulative +=
-                        uint256(
-                            FixedPoint.fraction(reserve1, reserve0)._x
-                        )
+                        uint256(FixedPoint.fraction(reserve1, reserve0)._x)
                         * timeElapsed;
                 } else {
                     // Base token is token1
                     // counterfactual
                     priceCumulative +=
-                        uint256(
-                            FixedPoint.fraction(reserve0, reserve1)._x
-                        )
+                        uint256(FixedPoint.fraction(reserve0, reserve1)._x)
                         * timeElapsed;
                 }
             }

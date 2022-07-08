@@ -192,12 +192,8 @@ contract ExchangeSystem is OwnableUpgradeable {
 
         // Record the pending entry
         PendingExchangeEntry memory newPendingEntry = PendingExchangeEntry({
-            id: uint64(
-                ++lastPendingExchangeEntryId
-                ),
-            timestamp: uint64(
-                block.timestamp
-                ),
+            id: uint64(++lastPendingExchangeEntryId),
+            timestamp: uint64(block.timestamp),
             fromAddr: fromAddr,
             destAddr: destAddr,
             fromAmount: sourceAmount,
@@ -212,9 +208,7 @@ contract ExchangeSystem is OwnableUpgradeable {
             );
     }
 
-    function _settle(uint256 pendingExchangeEntryId, address settler)
-        private
-    {
+    function _settle(uint256 pendingExchangeEntryId, address settler) private {
         PendingExchangeEntry memory exchangeEntry =
             pendingExchangeEntries[pendingExchangeEntryId];
         require(exchangeEntry.id > 0, "ExchangeSystem: pending entry not found");

@@ -352,10 +352,7 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
         emit ActionReverted(pendingActionId);
     }
 
-    function submitFees(uint256 positionId, uint256 amount)
-        external
-        override
-    {
+    function submitFees(uint256 positionId, uint256 amount) external override {
         require(poolFeeHolder != address(0), "PerpExchange: fee pool not set");
 
         IERC20Upgradeable(address(lusdToken)).transferFrom(
@@ -436,9 +433,7 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
     {
         actionId = ++lastPendingActionId;
         pendingActionMetas[actionId] = PendingActionMeta({
-            timestamp: block
-                .timestamp
-                .toUint64(),
+            timestamp: block.timestamp.toUint64(),
             user: user,
             actionType: actionType
         });

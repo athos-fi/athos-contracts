@@ -54,10 +54,7 @@ contract TokenEscrow is OwnableUpgradeable {
         return withdrawableFromVesting;
     }
 
-    function __TokenEscrow_init(IERC20Upgradeable _token)
-        public
-        initializer
-    {
+    function __TokenEscrow_init(IERC20Upgradeable _token) public initializer {
         __Ownable_init();
 
         require(address(_token) != address(0), "TokenEscrow: zero address");
@@ -160,9 +157,8 @@ contract TokenEscrow is OwnableUpgradeable {
         VestingSchedule memory vestingSchedule = vestingSchedules[user];
 
         if (vestingSchedule.amount == 0) return (0, 0, false);
-        if (block.timestamp < uint256(vestingSchedule.startTime)) return (
-            0, 0, false
-        );
+        if (block.timestamp < uint256(vestingSchedule.startTime))
+        return (0, 0, false);
 
         uint256 currentStepTime = MathUpgradeable.min(
             block.timestamp.sub(uint256(vestingSchedule.startTime)).div(
@@ -171,9 +167,8 @@ contract TokenEscrow is OwnableUpgradeable {
             uint256(vestingSchedule.endTime)
         );
 
-        if (currentStepTime <= uint256(vestingSchedule.lastClaimTime)) return (
-            0, 0, false
-        );
+        if (currentStepTime <= uint256(vestingSchedule.lastClaimTime))
+        return (0, 0, false);
 
         uint256 totalSteps = uint256(vestingSchedule.endTime).sub(
             uint256(vestingSchedule.startTime)

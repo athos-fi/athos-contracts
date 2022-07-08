@@ -88,10 +88,7 @@ contract AirdropDistributor is OwnableUpgradeable {
             );
     }
 
-    function setFirstUnlockTime(uint256 _firstUnlockTime)
-        external
-        onlyOwner
-    {
+    function setFirstUnlockTime(uint256 _firstUnlockTime) external onlyOwner {
         firstUnlockTime = _firstUnlockTime;
         emit FirstUnlockTimeChanged(_firstUnlockTime);
     }
@@ -152,9 +149,7 @@ contract AirdropDistributor is OwnableUpgradeable {
         airdropEntries[recipient] = AirdropEntry({
             amount: airdropEntry.amount,
             claimed: true,
-            claimTime: block
-                .timestamp
-                .toUint32()
+            claimTime: block.timestamp.toUint32()
         });
 
         uint256 immediatelyUnlockedAmount =

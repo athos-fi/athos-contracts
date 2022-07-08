@@ -25,9 +25,9 @@ contract AirdropDistributorTest is Test {
         0x0000000000000000000000000000000000000033;
 
     function setUp() public {
-        payable(ALICE).transfer(1_000 ether);
-        payable(BOB).transfer(1_000 ether);
-        payable(CHARLIE).transfer(1_000 ether);
+        payable(ALICE).transfer(1000 ether);
+        payable(BOB).transfer(1000 ether);
+        payable(CHARLIE).transfer(1000 ether);
 
         startTime = block.timestamp + 100 days;
         deadline = block.timestamp + 365 days;
