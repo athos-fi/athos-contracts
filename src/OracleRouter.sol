@@ -16,19 +16,14 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
 
     event GlobalStalePeriodUpdated(
-        uint256 oldStalePeriod,
-        uint256 newStalePeriod
+        uint256 oldStalePeriod, uint256 newStalePeriod
     );
     event StalePeriodOverrideUpdated(
-        bytes32 currencyKey,
-        uint256 oldStalePeriod,
-        uint256 newStalePeriod
+        bytes32 currencyKey, uint256 oldStalePeriod, uint256 newStalePeriod
     );
     event ChainlinkOracleAdded(bytes32 currencyKey, address oracle);
     event BandOracleAdded(
-        bytes32 currencyKey,
-        string bandCurrencyKey,
-        address oracle
+        bytes32 currencyKey, string bandCurrencyKey, address oracle
     );
     event UniswapTwapOracleAdded(bytes32 currencyKey, address oracle);
     event TerminalPriceOracleAdded(bytes32 currencyKey, uint160 terminalPrice);
@@ -72,7 +67,9 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
     }
 
     function isPriceStaled(bytes32 currencyKey) external view returns (bool) {
-        if (currencyKey == LUSD) return false;
+        if (currencyKey == LUSD) {
+            return false;
+        }
         (, uint256 time) = _getPriceData(currencyKey);
         return _isUpdateTimeStaled(time, getStalePeriodForCurrency(currencyKey));
     }
@@ -83,7 +80,9 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         override
         returns (uint256)
     {
-        if (sourceKey == destKey) return sourceAmount;
+        if (sourceKey == destKey) {
+            return sourceAmount;
+        }
 
         (uint256 sourcePrice, uint256 sourceTime) = _getPriceData(sourceKey);
         (uint256 destPrice, uint256 destTime) = _getPriceData(destKey);
@@ -184,10 +183,8 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         onlyOwner
     {
         require(
-            currencyKeys.length
-                == bandCurrencyKeys.length
-                && bandCurrencyKeys.length
-                == oracleAddresses.length,
+            currencyKeys.length == bandCurrencyKeys.length
+                && bandCurrencyKeys.length == oracleAddresses.length,
             "OracleRouter: array length mismatch"
         );
 
@@ -392,8 +389,9 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         view
         returns (uint256 price, uint256 updateTime)
     {
-        if (currencyKey == LUSD)
-        return (SafeDecimalMath.unit(), block.timestamp);
+        if (currencyKey == LUSD) {
+            return (SafeDecimalMath.unit(), block.timestamp);
+        }
 
         OracleSettings memory settings = oracleSettings[currencyKey];
         require(

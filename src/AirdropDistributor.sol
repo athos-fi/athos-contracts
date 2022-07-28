@@ -61,7 +61,8 @@ contract AirdropDistributor is OwnableUpgradeable {
             "AirdropDistributor: invalid timestamps"
         );
         require(
-            address(_rewardLocker) != address(0), "AirdropDistributor: zero address"
+            address(_rewardLocker) != address(0),
+            "AirdropDistributor: zero address"
         );
         require(
             address(_token) != address(0), "AirdropDistributor: zero address"
@@ -116,7 +117,8 @@ contract AirdropDistributor is OwnableUpgradeable {
 
     function withdrawRemaining() external onlyOwner {
         require(
-            block.timestamp >= deadline, "AirdropDistributor: deadline not reached"
+            block.timestamp >= deadline,
+            "AirdropDistributor: deadline not reached"
         );
 
         uint256 balance = token.balanceOf(address(this));

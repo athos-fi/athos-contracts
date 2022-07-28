@@ -124,7 +124,8 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
         uint256 maxCanBuild =
             collaterSys.MaxRedeemableInUsd(user).multiplyDecimal(buildRatio);
         require(
-            amount <= maxCanBuild, "Build amount too big, you need more collateral"
+            amount <= maxCanBuild,
+            "Build amount too big, you need more collateral"
         );
 
         // calc debt

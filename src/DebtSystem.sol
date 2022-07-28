@@ -100,7 +100,10 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
         userDebtState[_user].debtProportion = _debtProportion;
         userDebtState[_user].debtFactor = _lastSystemDebtFactor();
         emit UpdateUserDebtLog(
-            _user, _debtProportion, userDebtState[_user].debtFactor, block.timestamp
+            _user,
+            _debtProportion,
+            userDebtState[_user].debtFactor,
+            block.timestamp
             );
     }
 

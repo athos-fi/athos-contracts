@@ -85,12 +85,8 @@ contract RewardSystem is OwnableUpgradeable {
         _setRewardSigner(_rewardSigner);
 
         require(
-            _lusdAddress
-                != address(0)
-                && _collateralSystemAddress
-                != address(0)
-                && _rewardLockerAddress
-                != address(0),
+            _lusdAddress != address(0) && _collateralSystemAddress != address(0)
+                && _rewardLockerAddress != address(0),
             "RewardSystem: zero address"
         );
         lusd = IERC20Upgradeable(_lusdAddress);
@@ -195,11 +191,8 @@ contract RewardSystem is OwnableUpgradeable {
         uint256 currentPeriodId = getCurrentPeriodId();
         require(periodId < currentPeriodId, "RewardSystem: period not ended");
         require(
-            currentPeriodId
-                <= CLAIM_WINDOW_PERIOD_COUNT
-                || periodId
-                >= currentPeriodId
-                - CLAIM_WINDOW_PERIOD_COUNT,
+            currentPeriodId <= CLAIM_WINDOW_PERIOD_COUNT
+                || periodId >= currentPeriodId - CLAIM_WINDOW_PERIOD_COUNT,
             "RewardSystem: reward expired"
         );
 

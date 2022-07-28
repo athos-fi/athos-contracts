@@ -109,7 +109,9 @@ contract UniswapTwapOracle is IUniswapTwapOracle, AccessControlUpgradeable {
 
         for (uint256 indPair = 0; indPair < priceRoute.length - 1; indPair++) {
             uint256 currentPrice = getPairPrice(
-                priceRoute[indPair], priceRoute[indPair + 1], baseDecimals[indPair]
+                priceRoute[indPair],
+                priceRoute[indPair + 1],
+                baseDecimals[indPair]
             );
             if (lastPrice == 0) {
                 lastPrice = currentPrice;
@@ -161,10 +163,12 @@ contract UniswapTwapOracle is IUniswapTwapOracle, AccessControlUpgradeable {
 
         uint256 timeElapsed = block.timestamp - oldCheckpoint.timestamp;
         require(
-            timeElapsed >= minInterval, "UniswapTwapOracle: time elasped too small"
+            timeElapsed >= minInterval,
+            "UniswapTwapOracle: time elasped too small"
         );
         require(
-            timeElapsed <= maxInterval, "UniswapTwapOracle: time elasped too large"
+            timeElapsed <= maxInterval,
+            "UniswapTwapOracle: time elasped too large"
         );
 
         // Calculate uniswap time-weighted average price

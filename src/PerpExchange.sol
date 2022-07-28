@@ -45,9 +45,7 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
     event PoolFeeHolderChanged(address newPoolFeeHolder);
     event FoundationFeeHolderChanged(address newFoundationFeeHolder);
     event FeesCharged(
-        uint256 positionId,
-        uint256 feeForPool,
-        uint256 feeForFoundation
+        uint256 positionId, uint256 feeForPool, uint256 feeForFoundation
     );
     event InsuranceFundContribution(uint256 positionId, uint256 amount);
 
@@ -342,7 +340,8 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
             );
         } else if (actionMeta.actionType == ACTION_TYPE_INCREASE_POSITION) {
             IERC20Upgradeable(address(lusdToken)).transfer(
-                actionMeta.user, increasePositionActions[pendingActionId].collateral
+                actionMeta.user,
+                increasePositionActions[pendingActionId].collateral
             );
         }
 

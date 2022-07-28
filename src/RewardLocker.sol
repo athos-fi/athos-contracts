@@ -14,16 +14,11 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
 
     event RewardEntryAdded(
-        uint256 entryId,
-        address user,
-        uint256 amount,
-        uint256 unlockTime
+        uint256 entryId, address user, uint256 amount, uint256 unlockTime
     );
     event RewardEntryRemoved(uint256 entryId);
     event RewardAmountChanged(
-        uint256 entryId,
-        uint256 oldAmount,
-        uint256 newAmount
+        uint256 entryId, uint256 oldAmount, uint256 newAmount
     );
     event RewardEntryUnlocked(uint256 entryId, address user, uint256 amount);
 
@@ -268,7 +263,8 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         uint216 trimmedAmount = uint216(amount);
         uint40 trimmedUnlockTime = uint40(unlockTime);
         require(
-            uint256(trimmedAmount) == amount, "RewardLocker: reward amount overflow"
+            uint256(trimmedAmount) == amount,
+            "RewardLocker: reward amount overflow"
         );
         require(
             uint256(trimmedUnlockTime) == unlockTime,
@@ -288,7 +284,8 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
 
     function _unlockReward(address user, uint256 rewardEntryId) private {
         require(
-            rewarderAddress != address(0), "RewardLocker: Rewarder address not set"
+            rewarderAddress != address(0),
+            "RewardLocker: Rewarder address not set"
         );
         require(
             collateralSystemAddr != address(0),
@@ -362,7 +359,9 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
                 })
             );
 
-            if (amount1Left == 0 && amount2Left == 0) break;
+            if (amount1Left == 0 && amount2Left == 0) {
+                break;
+            }
         }
 
         // Ensure all amounts are distributed

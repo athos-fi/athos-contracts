@@ -32,14 +32,10 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         uint256 fees
     );
     event CollateralAdded(
-        address indexed user,
-        uint256 indexed positionId,
-        uint256 amount
+        address indexed user, uint256 indexed positionId, uint256 amount
     );
     event CollateralRemoved(
-        address indexed user,
-        uint256 indexed positionId,
-        uint256 amount
+        address indexed user, uint256 indexed positionId, uint256 amount
     );
     event PoistionLiquidated(
         address indexed user,
@@ -147,7 +143,8 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         require(address(_lnPrices) != address(0), "Perpetual: zero address");
         require(_maintenanceMargin > 0, "Perpetual: zero amount");
         require(
-            _minInitMargin > _maintenanceMargin, "Perpetual: invalid minInitMargin"
+            _minInitMargin > _maintenanceMargin,
+            "Perpetual: invalid minInitMargin"
         );
 
         exchange = _exchange;
@@ -473,17 +470,14 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         uint256 collateralizationRatioAfter =
             _calculateCollateralizationRatio(positionId);
         require(
-            collateralizationRatioAfter
-                >= maintenanceMargin
-                && collateralizationRatioAfter
-                <= minInitMargin,
+            collateralizationRatioAfter >= maintenanceMargin
+                && collateralizationRatioAfter <= minInitMargin,
             "Perpetual: invalid liquidation amount"
         );
 
         // No contribution is holder not set
         uint256 insuranceContribution =
-            exchange.insuranceFundHolder()
-                == address(0)
+            exchange.insuranceFundHolder() == address(0)
             ? 0
             : liquidatorReward.mul(insuranceFundContributionRatio).div(UNIT);
         liquidatorReward = liquidatorReward.sub(insuranceContribution);

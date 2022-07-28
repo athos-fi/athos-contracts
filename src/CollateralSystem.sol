@@ -152,7 +152,8 @@ contract CollateralSystem is
             address(_mConfig) != address(0), "CollateralSystem: zero address"
         );
         require(
-            address(_mRewardLocker) != address(0), "CollateralSystem: zero address"
+            address(_mRewardLocker) != address(0),
+            "CollateralSystem: zero address"
         );
         require(
             address(_buildBurnSystem) != address(0),
@@ -500,7 +501,10 @@ contract CollateralSystem is
         tokeninfo.totalCollateral = tokeninfo.totalCollateral.add(_amount);
 
         emit CollateralLog(
-            user, _currency, _amount, userCollateralData[user][_currency].collateral
+            user,
+            _currency,
+            _amount,
+            userCollateralData[user][_currency].collateral
             );
         return true;
     }
@@ -625,33 +629,18 @@ contract CollateralSystem is
     }
 
     event UpdateTokenSetting(
-        bytes32 symbol,
-        address tokenAddr,
-        uint256 minCollateral,
-        bool close
+        bytes32 symbol, address tokenAddr, uint256 minCollateral, bool close
     );
     event CollateralLog(
-        address user,
-        bytes32 _currency,
-        uint256 _amount,
-        uint256 _userTotal
+        address user, bytes32 _currency, uint256 _amount, uint256 _userTotal
     );
     event RedeemCollateral(
-        address user,
-        bytes32 _currency,
-        uint256 _amount,
-        uint256 _userTotal
+        address user, bytes32 _currency, uint256 _amount, uint256 _userTotal
     );
     event CollateralMoved(
-        address fromUser,
-        address toUser,
-        bytes32 currency,
-        uint256 amount
+        address fromUser, address toUser, bytes32 currency, uint256 amount
     );
     event CollateralUnlockReward(
-        address user,
-        bytes32 _currency,
-        uint256 _amount,
-        uint256 _userTotal
+        address user, bytes32 _currency, uint256 _amount, uint256 _userTotal
     );
 }

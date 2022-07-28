@@ -172,15 +172,15 @@ contract UniswapCheckpoints is IUniswapCheckpoints, OwnableUpgradeable {
                 if (uint160(baseToken) < uint160(quoteToken)) {
                     // Base token is token0
                     // counterfactual
-                    priceCumulative +=
-                        uint256(FixedPoint.fraction(reserve1, reserve0)._x)
-                        * timeElapsed;
+                    priceCumulative += uint256(
+                        FixedPoint.fraction(reserve1, reserve0)._x
+                    ) * timeElapsed;
                 } else {
                     // Base token is token1
                     // counterfactual
-                    priceCumulative +=
-                        uint256(FixedPoint.fraction(reserve0, reserve1)._x)
-                        * timeElapsed;
+                    priceCumulative += uint256(
+                        FixedPoint.fraction(reserve0, reserve1)._x
+                    ) * timeElapsed;
                 }
             }
         }
@@ -209,11 +209,7 @@ contract UniswapCheckpoints is IUniswapCheckpoints, OwnableUpgradeable {
 
             // All items checked?
             require(
-                indCheckpoint
-                    > 0
-                    && checkpointCount
-                    - indCheckpoint
-                    < RING_BUFFER_SIZE,
+                indCheckpoint > 0 && checkpointCount - indCheckpoint < RING_BUFFER_SIZE,
                 "UniswapCheckpoints: no valid checkpoint"
             );
 

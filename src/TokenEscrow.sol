@@ -142,9 +142,9 @@ contract TokenEscrow is OwnableUpgradeable {
         uint256 totalAmountToSend = withdrawableFromVesting;
         require(totalAmountToSend > 0, "TokenEscrow: nothing to withdraw");
 
-        if (withdrawableFromVesting > 0) emit TokenVested(
-            msg.sender, withdrawableFromVesting
-            );
+        if (withdrawableFromVesting > 0) {
+            emit TokenVested(msg.sender, withdrawableFromVesting);
+        }
 
         token.transfer(msg.sender, totalAmountToSend);
     }
@@ -156,9 +156,12 @@ contract TokenEscrow is OwnableUpgradeable {
     {
         VestingSchedule memory vestingSchedule = vestingSchedules[user];
 
-        if (vestingSchedule.amount == 0) return (0, 0, false);
-        if (block.timestamp < uint256(vestingSchedule.startTime))
-        return (0, 0, false);
+        if (vestingSchedule.amount == 0) {
+            return (0, 0, false);
+        }
+        if (block.timestamp < uint256(vestingSchedule.startTime)) {
+            return (0, 0, false);
+        }
 
         uint256 currentStepTime = MathUpgradeable.min(
             block.timestamp.sub(uint256(vestingSchedule.startTime)).div(
@@ -167,8 +170,9 @@ contract TokenEscrow is OwnableUpgradeable {
             uint256(vestingSchedule.endTime)
         );
 
-        if (currentStepTime <= uint256(vestingSchedule.lastClaimTime))
-        return (0, 0, false);
+        if (currentStepTime <= uint256(vestingSchedule.lastClaimTime)) {
+            return (0, 0, false);
+        }
 
         uint256 totalSteps = uint256(vestingSchedule.endTime).sub(
             uint256(vestingSchedule.startTime)

@@ -204,7 +204,12 @@ contract ExchangeSystem is OwnableUpgradeable {
 
         // Emit event for off-chain indexing
         emit PendingExchangeAdded(
-            newPendingEntry.id, fromAddr, destAddr, sourceAmount, sourceKey, destKey
+            newPendingEntry.id,
+            fromAddr,
+            destAddr,
+            sourceAmount,
+            sourceKey,
+            destKey
             );
     }
 
@@ -263,8 +268,12 @@ contract ExchangeSystem is OwnableUpgradeable {
 
         IAsset lusd = getAssetByKey(LUSD_KEY);
 
-        if (feeForPoolInUsd > 0) lusd.mint(mRewardSys, feeForPoolInUsd);
-        if (foundationSplit > 0) lusd.mint(foundationFeeHolder, foundationSplit);
+        if (feeForPoolInUsd > 0) {
+            lusd.mint(mRewardSys, feeForPoolInUsd);
+        }
+        if (foundationSplit > 0) {
+            lusd.mint(foundationFeeHolder, foundationSplit);
+        }
 
         source.burn(address(this), exchangeEntry.fromAmount);
         dest.mint(exchangeEntry.destAddr, destRecived);
@@ -272,7 +281,11 @@ contract ExchangeSystem is OwnableUpgradeable {
         delete pendingExchangeEntries[pendingExchangeEntryId];
 
         emit PendingExchangeSettled(
-            exchangeEntry.id, settler, destRecived, feeForPoolInUsd, foundationSplit
+            exchangeEntry.id,
+            settler,
+            destRecived,
+            feeForPoolInUsd,
+            foundationSplit
             );
     }
 

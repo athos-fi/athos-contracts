@@ -14,7 +14,8 @@ contract UniswapCheckpointer is OwnableUpgradeable {
         __Ownable_init();
 
         require(
-            address(_checkpoints) != address(0), "UniswapCheckpointer: zero address"
+            address(_checkpoints) != address(0),
+            "UniswapCheckpointer: zero address"
         );
 
         checkpoints = _checkpoints;

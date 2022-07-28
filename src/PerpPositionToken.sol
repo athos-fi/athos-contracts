@@ -11,9 +11,7 @@ contract PerpPositionToken is
     OwnableUpgradeable
 {
     event PositionTokenMinted(
-        uint256 indexed tokenId,
-        address indexed perpAddress,
-        address indexed to
+        uint256 indexed tokenId, address indexed perpAddress, address indexed to
     );
 
     uint256 public lastPositionId;
