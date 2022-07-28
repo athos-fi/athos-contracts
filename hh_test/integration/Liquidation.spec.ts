@@ -154,14 +154,14 @@ describe("Integration | Liquidation", function () {
         .approve(stack.collateralSystem.address, uint256Max);
     }
 
-    // Alice stakes 1,000 ATH ($100) and builds 20 aUSD
+    // Alice stakes 1,000 ATH ($100) and builds 20 athUSD
     await stakeAndBuild(
       alice,
       expandTo18Decimals(1_000),
       expandTo18Decimals(20)
     );
 
-    // Bob staks 1,000,000 ATH nd builds 1,000 aUSD
+    // Bob staks 1,000,000 ATH nd builds 1,000 athUSD
     await stakeAndBuild(
       bob,
       expandTo18Decimals(1_000_000),
@@ -332,14 +332,14 @@ describe("Integration | Liquidation", function () {
 
     /**
      * Formula:
-     *     Max aUSD to Burn = (Debt Balance - Collateral Value * Issuance Ratio) / (1 - (1 + Liquidation Reward) * Issuance Ratio)
+     *     Max athUSD to Burn = (Debt Balance - Collateral Value * Issuance Ratio) / (1 - (1 + Liquidation Reward) * Issuance Ratio)
      *
      * Calculation:
-     *     Max aUSD to Burn = (20 - 0.035 * 1000 * 0.2) / (1 - (1 + 0.15) * 0.2) = 16.883116883116883116
+     *     Max athUSD to Burn = (20 - 0.035 * 1000 * 0.2) / (1 - (1 + 0.15) * 0.2) = 16.883116883116883116
      */
     const maxAusdToBurn = BigNumber.from("16883116883116883116");
 
-    // Burning 1 unit more aUSD fails
+    // Burning 1 unit more athUSD fails
     await expect(
       stack.liquidation
         .connect(bob)
@@ -387,7 +387,7 @@ describe("Integration | Liquidation", function () {
       .markPositionAsUndercollateralized(alice.address);
     await passLiquidationDelay();
 
-    // Bob liquidates Alice's position by burning 10 aUSD
+    // Bob liquidates Alice's position by burning 10 athUSD
     await expect(
       stack.liquidation
         .connect(bob)

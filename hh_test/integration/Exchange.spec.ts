@@ -102,7 +102,7 @@ describe("Integration | Exchange", function () {
       expandTo18Decimals(1_000_000) // _amount
     );
 
-    // Alice builds 1,000 aUSD
+    // Alice builds 1,000 athUSD
     await stack.buildBurnSystem.connect(alice).BuildAsset(
       expandTo18Decimals(1_000) // amount
     );
@@ -115,9 +115,9 @@ describe("Integration | Exchange", function () {
       expandTo18Decimals(0.3) // value
     );
 
-    // Alice exchanges 500 aUSD for 0.025 lBTC
+    // Alice exchanges 500 athUSD for 0.025 lBTC
     await stack.exchangeSystem.connect(alice).exchange(
-      formatBytes32String("aUSD"), // sourceKey
+      formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       formatBytes32String("aBTC") // destKey
@@ -144,9 +144,9 @@ describe("Integration | Exchange", function () {
       bob.address // _foundationFeeHolder
     );
 
-    // Alice exchanges 500 aUSD for 0.025 lBTC
+    // Alice exchanges 500 athUSD for 0.025 lBTC
     await stack.exchangeSystem.connect(alice).exchange(
-      formatBytes32String("aUSD"), // sourceKey
+      formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       formatBytes32String("aBTC") // destKey
@@ -180,9 +180,9 @@ describe("Integration | Exchange", function () {
       bob.address // _foundationFeeHolder
     );
 
-    // Alice exchanges 500 aUSD for 0.025 lBTC
+    // Alice exchanges 500 athUSD for 0.025 lBTC
     await stack.exchangeSystem.connect(alice).exchange(
-      formatBytes32String("aUSD"), // sourceKey
+      formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       formatBytes32String("aBTC") // destKey
@@ -200,9 +200,9 @@ describe("Integration | Exchange", function () {
 
     /**
      * Fee split:
-     *   Total = 0.025 * 0.01 * 20000 = 5 aUSD
-     *   Foundation = 5 * 0.3 = 1.5 aUSD
-     *   Pool = 5 - 1.5 = 3.5 aUSD
+     *   Total = 0.025 * 0.01 * 20000 = 5 athUSD
+     *   Foundation = 5 * 0.3 = 1.5 athUSD
+     *   Pool = 5 - 1.5 = 3.5 athUSD
      */
     expect(
       await stack.ausdToken.balanceOf(stack.rewardSystem.address)
@@ -223,7 +223,7 @@ describe("Integration | Exchange", function () {
   it("cannot settle when price is staled", async () => {
     const exchangeAction = () =>
       stack.exchangeSystem.connect(alice).exchange(
-        formatBytes32String("aUSD"), // sourceKey
+        formatBytes32String("athUSD"), // sourceKey
         expandTo18Decimals(500), // sourceAmount
         alice.address, // destAddr
         formatBytes32String("aBTC") // destKey
@@ -258,7 +258,7 @@ describe("Integration | Exchange", function () {
 
   it("can sell when position entrance is disabled", async () => {
     await stack.exchangeSystem.connect(alice).exchange(
-      formatBytes32String("aUSD"), // sourceKey
+      formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       formatBytes32String("aBTC") // destKey
@@ -272,13 +272,13 @@ describe("Integration | Exchange", function () {
       formatBytes32String("aBTC"), // sourceKey
       expandTo18Decimals(0.01), // sourceAmount
       alice.address, // destAddr
-      formatBytes32String("aUSD") // destKey
+      formatBytes32String("athUSD") // destKey
     );
   });
 
   it("cannot buy when position entrance is disabled", async () => {
     await stack.exchangeSystem.connect(alice).exchange(
-      formatBytes32String("aUSD"), // sourceKey
+      formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       formatBytes32String("aBTC") // destKey
@@ -289,7 +289,7 @@ describe("Integration | Exchange", function () {
     // Can no longer buy
     await expect(
       stack.exchangeSystem.connect(alice).exchange(
-        formatBytes32String("aUSD"), // sourceKey
+        formatBytes32String("athUSD"), // sourceKey
         expandTo18Decimals(500), // sourceAmount
         alice.address, // destAddr
         formatBytes32String("aBTC") // destKey
@@ -299,7 +299,7 @@ describe("Integration | Exchange", function () {
 
   it("cannot buy when asset position entrance is disabled", async () => {
     await stack.exchangeSystem.connect(alice).exchange(
-      ethers.utils.formatBytes32String("aUSD"), // sourceKey
+      ethers.utils.formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       ethers.utils.formatBytes32String("aBTC") // destKey
@@ -312,7 +312,7 @@ describe("Integration | Exchange", function () {
     // Can no longer buy
     await expect(
       stack.exchangeSystem.connect(alice).exchange(
-        ethers.utils.formatBytes32String("aUSD"), // sourceKey
+        ethers.utils.formatBytes32String("athUSD"), // sourceKey
         expandTo18Decimals(500), // sourceAmount
         alice.address, // destAddr
         ethers.utils.formatBytes32String("aBTC") // destKey
@@ -332,7 +332,7 @@ describe("Integration | Exchange", function () {
       .connect(deployer)
       .setAssetExitPositionOnly(ethers.utils.formatBytes32String("lETH"), true);
     await stack.exchangeSystem.connect(alice).exchange(
-      ethers.utils.formatBytes32String("aUSD"), // sourceKey
+      ethers.utils.formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       ethers.utils.formatBytes32String("aBTC") // destKey
@@ -342,7 +342,7 @@ describe("Integration | Exchange", function () {
   it("events should be emitted for exchange and settlement", async () => {
     await expect(
       stack.exchangeSystem.connect(alice).exchange(
-        formatBytes32String("aUSD"), // sourceKey
+        formatBytes32String("athUSD"), // sourceKey
         expandTo18Decimals(500), // sourceAmount
         alice.address, // destAddr
         formatBytes32String("aBTC") // destKey
@@ -354,7 +354,7 @@ describe("Integration | Exchange", function () {
         alice.address, // fromAddr
         alice.address, // destAddr
         expandTo18Decimals(500), // fromAmount
-        formatBytes32String("aUSD"), // fromCurrency
+        formatBytes32String("athUSD"), // fromCurrency
         formatBytes32String("aBTC") // toCurrency
       );
 
@@ -378,7 +378,7 @@ describe("Integration | Exchange", function () {
 
   it("cannot settle trade before delay is passed", async () => {
     await stack.exchangeSystem.connect(alice).exchange(
-      formatBytes32String("aUSD"), // sourceKey
+      formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       formatBytes32String("aBTC") // destKey
@@ -406,7 +406,7 @@ describe("Integration | Exchange", function () {
   it("source asset should be locked up on exchange", async () => {
     await expect(
       stack.exchangeSystem.connect(alice).exchange(
-        formatBytes32String("aUSD"), // sourceKey
+        formatBytes32String("athUSD"), // sourceKey
         expandTo18Decimals(400), // sourceAmount
         alice.address, // destAddr
         formatBytes32String("aBTC") // destKey
@@ -429,7 +429,7 @@ describe("Integration | Exchange", function () {
 
   it("trade cannot be settled twice", async () => {
     await stack.exchangeSystem.connect(alice).exchange(
-      formatBytes32String("aUSD"), // sourceKey
+      formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       formatBytes32String("aBTC") // destKey
@@ -446,7 +446,7 @@ describe("Integration | Exchange", function () {
 
   it("can only revert trade after revert delay", async () => {
     await stack.exchangeSystem.connect(alice).exchange(
-      formatBytes32String("aUSD"), // sourceKey
+      formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       formatBytes32String("aBTC") // destKey
@@ -494,7 +494,7 @@ describe("Integration | Exchange", function () {
 
   it("cannot settle trade after revert delay", async () => {
     await stack.exchangeSystem.connect(alice).exchange(
-      formatBytes32String("aUSD"), // sourceKey
+      formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       formatBytes32String("aBTC") // destKey
@@ -513,7 +513,7 @@ describe("Integration | Exchange", function () {
 
   it("cannot revert trade twice", async () => {
     await stack.exchangeSystem.connect(alice).exchange(
-      formatBytes32String("aUSD"), // sourceKey
+      formatBytes32String("athUSD"), // sourceKey
       expandTo18Decimals(500), // sourceAmount
       alice.address, // destAddr
       formatBytes32String("aBTC") // destKey

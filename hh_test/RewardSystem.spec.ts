@@ -91,8 +91,8 @@ describe("RewardSystem", function () {
     });
 
     ausd = await MockERC20.deploy(
-      "aUSD", // _name
-      "aUSD" // _symbol
+      "athUSD", // _name
+      "athUSD" // _symbol
     );
 
     collateralSystem = await waffle.deployMockContract(
@@ -112,7 +112,7 @@ describe("RewardSystem", function () {
       rewardLocker.address // _rewardLockerAddress
     );
 
-    // RewardSystem holds 1,000,000 aUSD to start
+    // RewardSystem holds 1,000,000 athUSD to start
     await ausd
       .connect(deployer)
       .mint(rewardSystem.address, expandTo18Decimals(1_000_000));

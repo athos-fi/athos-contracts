@@ -71,7 +71,7 @@ contract ExchangeSystem is OwnableUpgradeable {
         "TradeSettlementDelay";
     bytes32 private constant CONFIG_TRADE_REVERT_DELAY = "TradeRevertDelay";
 
-    bytes32 private constant LUSD_KEY = "aUSD";
+    bytes32 private constant LUSD_KEY = "athUSD";
 
     function __ExchangeSystem_init(
         IAssetRegistry _mAssets,

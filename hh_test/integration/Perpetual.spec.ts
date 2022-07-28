@@ -107,7 +107,7 @@ describe("Integration | Perpetual", function () {
       .connect(deployer)
       .transfer(alice.address, expandTo18Decimals(1_000_000));
 
-    // Alice stakes all ATH and builds 10,000 aUSD
+    // Alice stakes all ATH and builds 10,000 athUSD
     await stack.athToken
       .connect(alice)
       .approve(stack.collateralSystem.address, uint256Max);
@@ -117,7 +117,7 @@ describe("Integration | Perpetual", function () {
       expandTo18Decimals(10_000) // buildAmount
     );
 
-    // Alice sends 10,000 aUSD to Bob
+    // Alice sends 10,000 athUSD to Bob
     await stack.ausdToken.connect(alice).transfer(
       bob.address, // recipient
       expandTo18Decimals(10_000) // amount
@@ -130,10 +130,10 @@ describe("Integration | Perpetual", function () {
 
   it("can only open long position with sufficient collateral", async () => {
     /**
-     * 10% init margin = 0.1 * 20000 * 10% = 200 aUSD
-     * 1% fee = 0.1 * 20000 * 1% = 20 aUSD
+     * 10% init margin = 0.1 * 20000 * 10% = 200 athUSD
+     * 1% fee = 0.1 * 20000 * 1% = 20 athUSD
      *
-     * Need to send minimum 220 aUSD as collateral
+     * Need to send minimum 220 athUSD as collateral
      */
     await stack.perpExchange.connect(bob).openPosition(
       formatBytes32String("aBTC"), // underlying
@@ -258,7 +258,7 @@ describe("Integration | Perpetual", function () {
       await stack.ausdToken.balanceOf(stack.rewardSystem.address)
     ).to.equal(0);
 
-    // 20 aUSD in fees
+    // 20 athUSD in fees
     await stack.perpExchange.connect(bob).openPosition(
       formatBytes32String("aBTC"), // underlying
       true, // isLong
@@ -273,7 +273,7 @@ describe("Integration | Perpetual", function () {
     ).to.equal(expandTo18Decimals(20));
   });
 
-  it("aUSD minters should not be affected when skew is zero", async () => {
+  it("athUSD minters should not be affected when skew is zero", async () => {
     await assertAliceDebt(expandTo18Decimals(10_000));
 
     // Bob longs and shorts 0.1 BTC
@@ -307,7 +307,7 @@ describe("Integration | Perpetual", function () {
 
   describe("Long positions", function () {
     beforeEach(async function () {
-      // Bob longs 0.1 BTC with 1,000 aUSD
+      // Bob longs 0.1 BTC with 1,000 athUSD
       await stack.perpExchange.connect(bob).openPosition(
         formatBytes32String("aBTC"), // underlying
         true, // isLong
@@ -337,7 +337,7 @@ describe("Integration | Perpetual", function () {
       expect(position.collateral).to.equal(expandTo18Decimals(980));
     });
 
-    it("aUSD minter debt should not be affected", async () => {
+    it("athUSD minter debt should not be affected", async () => {
       await assertAliceDebt(expandTo18Decimals(10_000));
     });
 
@@ -348,7 +348,7 @@ describe("Integration | Perpetual", function () {
     });
 
     describe("Add collateral", function () {
-      it("aUSD should be transferred to perp contract", async () => {
+      it("athUSD should be transferred to perp contract", async () => {
         expect(await stack.ausdToken.balanceOf(bob.address)).to.equal(
           expandTo18Decimals(9_000)
         );
@@ -385,10 +385,10 @@ describe("Integration | Perpetual", function () {
     describe("Remove collateral", function () {
       it("can only remove collateral up to min init margin", async () => {
         /**
-         * 10% init margin = 0.1 * 20000 * 10% = 200 aUSD
-         * 1% fee = 0.1 * 20000 * 1% = 20 aUSD
+         * 10% init margin = 0.1 * 20000 * 10% = 200 athUSD
+         * 1% fee = 0.1 * 20000 * 1% = 20 athUSD
          *
-         * Sending in 1000 aUSD. Can remove up to 780 aUSD
+         * Sending in 1000 athUSD. Can remove up to 780 athUSD
          */
 
         // Trying to remove too much
@@ -462,9 +462,9 @@ describe("Integration | Perpetual", function () {
         );
 
         /**
-         * Entry fees = 0.1 * 20,000 * 0.01 = 20 aUSD
-         * Exit fees = 0.1 * 30,000 * 0.01 = 30 aUSD
-         * PnL = 0.1 * (30,000 - 20,000) - 20 - 30 = 950 aUSD
+         * Entry fees = 0.1 * 20,000 * 0.01 = 20 athUSD
+         * Exit fees = 0.1 * 30,000 * 0.01 = 30 athUSD
+         * PnL = 0.1 * (30,000 - 20,000) - 20 - 30 = 950 athUSD
          */
         expect(await stack.ausdToken.balanceOf(bob.address)).to.equal(
           expandTo18Decimals(10_950)
@@ -479,7 +479,7 @@ describe("Integration | Perpetual", function () {
         ).to.equal(0);
       });
 
-      it("aUSD minter debt should increase", async () => {
+      it("athUSD minter debt should increase", async () => {
         await assertAliceDebt(expandTo18Decimals(11_000));
       });
 
@@ -512,9 +512,9 @@ describe("Integration | Perpetual", function () {
         );
 
         /**
-         * Entry fees = 0.1 * 20,000 * 0.01 = 20 aUSD
-         * Exit fees = 0.1 * 15,000 * 0.01 = 15 aUSD
-         * PnL = 0.1 * (15,000 - 20,000) - 20 - 15 = -535 aUSD
+         * Entry fees = 0.1 * 20,000 * 0.01 = 20 athUSD
+         * Exit fees = 0.1 * 15,000 * 0.01 = 15 athUSD
+         * PnL = 0.1 * (15,000 - 20,000) - 20 - 15 = -535 athUSD
          */
         expect(await stack.ausdToken.balanceOf(bob.address)).to.equal(
           expandTo18Decimals(9_465)
@@ -529,7 +529,7 @@ describe("Integration | Perpetual", function () {
         ).to.equal(0);
       });
 
-      it("aUSD minter debt should decrease", async () => {
+      it("athUSD minter debt should decrease", async () => {
         await assertAliceDebt(expandTo18Decimals(9_500));
       });
 
@@ -580,7 +580,7 @@ describe("Integration | Perpetual", function () {
 
   describe("Short positions", function () {
     beforeEach(async function () {
-      // Bob shorts 0.1 BTC with 1,000 aUSD
+      // Bob shorts 0.1 BTC with 1,000 athUSD
       await stack.perpExchange.connect(bob).openPosition(
         formatBytes32String("aBTC"), // underlying
         false, // isLong
@@ -610,7 +610,7 @@ describe("Integration | Perpetual", function () {
       expect(position.collateral).to.equal(expandTo18Decimals(2_980));
     });
 
-    it("aUSD minter debt should not be affected", async () => {
+    it("athUSD minter debt should not be affected", async () => {
       await assertAliceDebt(expandTo18Decimals(10_000));
     });
 
@@ -621,7 +621,7 @@ describe("Integration | Perpetual", function () {
     });
 
     describe("Add collateral", function () {
-      it("aUSD should be transferred to perp contract", async () => {
+      it("athUSD should be transferred to perp contract", async () => {
         expect(await stack.ausdToken.balanceOf(bob.address)).to.equal(
           expandTo18Decimals(9_000)
         );
@@ -658,10 +658,10 @@ describe("Integration | Perpetual", function () {
     describe("Remove collateral", function () {
       it("can only remove collateral up to min init margin", async () => {
         /**
-         * 10% init margin = 0.1 * 20000 * 10% = 200 aUSD
-         * 1% fee = 0.1 * 20000 * 1% = 20 aUSD
+         * 10% init margin = 0.1 * 20000 * 10% = 200 athUSD
+         * 1% fee = 0.1 * 20000 * 1% = 20 athUSD
          *
-         * Sending in 1000 aUSD. Can remove up to 780 aUSD
+         * Sending in 1000 athUSD. Can remove up to 780 athUSD
          */
 
         // Trying to remove too much
@@ -735,9 +735,9 @@ describe("Integration | Perpetual", function () {
         );
 
         /**
-         * Entry fees = 0.1 * 20,000 * 0.01 = 20 aUSD
-         * Exit fees = 0.1 * 25,000 * 0.01 = 25 aUSD
-         * PnL = 0.1 * (20,000 - 25,000) - 20 - 25 = -545 aUSD
+         * Entry fees = 0.1 * 20,000 * 0.01 = 20 athUSD
+         * Exit fees = 0.1 * 25,000 * 0.01 = 25 athUSD
+         * PnL = 0.1 * (20,000 - 25,000) - 20 - 25 = -545 athUSD
          */
         expect(await stack.ausdToken.balanceOf(bob.address)).to.equal(
           expandTo18Decimals(9_455)
@@ -752,7 +752,7 @@ describe("Integration | Perpetual", function () {
         ).to.equal(0);
       });
 
-      it("aUSD minter debt should increase", async () => {
+      it("athUSD minter debt should increase", async () => {
         await assertAliceDebt(expandTo18Decimals(9_500));
       });
 
@@ -785,9 +785,9 @@ describe("Integration | Perpetual", function () {
         );
 
         /**
-         * Entry fees = 0.1 * 20,000 * 0.01 = 20 aUSD
-         * Exit fees = 0.1 * 15,000 * 0.01 = 15 aUSD
-         * PnL = 0.1 * (20,000 - 15,000) - 20 - 15 = 465 aUSD
+         * Entry fees = 0.1 * 20,000 * 0.01 = 20 athUSD
+         * Exit fees = 0.1 * 15,000 * 0.01 = 15 athUSD
+         * PnL = 0.1 * (20,000 - 15,000) - 20 - 15 = 465 athUSD
          */
         expect(await stack.ausdToken.balanceOf(bob.address)).to.equal(
           expandTo18Decimals(10_465)
@@ -802,7 +802,7 @@ describe("Integration | Perpetual", function () {
         ).to.equal(0);
       });
 
-      it("aUSD minter debt should decrease", async () => {
+      it("athUSD minter debt should decrease", async () => {
         await assertAliceDebt(expandTo18Decimals(10_500));
       });
 

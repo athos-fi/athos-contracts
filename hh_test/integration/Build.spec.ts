@@ -39,7 +39,7 @@ describe("Integration | Build", function () {
       .approve(stack.collateralSystem.address, uint256Max);
   });
 
-  it("can build aUSD with just locked reward", async function () {
+  it("can build athUSD with just locked reward", async function () {
     // Lock 10,000 ATH of rewards for Alice
     await stack.rewardLocker.connect(deployer).migrateRewards(
       [alice.address], // _users
@@ -47,7 +47,7 @@ describe("Integration | Build", function () {
       [(await getBlockDateTime(ethers.provider)).plus({ years: 1 }).toSeconds()] // _lockTo
     );
 
-    // Alice can build 1 aUSD without staking
+    // Alice can build 1 athUSD without staking
     await stack.buildBurnSystem.connect(alice).BuildAsset(
       expandTo18Decimals(1) // amount
     );
@@ -121,7 +121,7 @@ describe("Integration | Build", function () {
       expandTo18Decimals(9_000) // _amount
     );
 
-    // Alice builds 10 aUSD
+    // Alice builds 10 athUSD
     await stack.buildBurnSystem.connect(alice).BuildAsset(
       expandTo18Decimals(10) // amount
     );

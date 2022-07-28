@@ -137,9 +137,9 @@ export const deployAthosStack = async (
   const ausdToken: Asset = (await upgrades.deployProxy(
     Asset,
     [
-      formatBytes32String("aUSD"), // _key
-      "aUSD", // _name
-      "aUSD", // _symbol
+      formatBytes32String("athUSD"), // _key
+      "athUSD", // _name
+      "athUSD", // _symbol
       accessController.address, // _accessCtrl
     ],
     {
