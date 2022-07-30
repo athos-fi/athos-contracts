@@ -10,7 +10,14 @@ const config: HardhatUserConfig = {
     sources: "src",
     tests: "hh_test",
   },
-  networks: {},
+  networks: {
+    moonbeam: {
+      url: process.env.MOONBEAM_RPC || "https://rpc.api.moonbeam.network/",
+      chainId: 1284,
+      gas: 8_000_000,
+      gasPrice: 150_000_000_000,
+    },
+  },
   solidity: {
     compilers: [
       // For WETH9
