@@ -15,13 +15,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 contract TokenEscrow is OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
 
-    event VestingScheduleAdded(
-        address indexed user,
-        uint256 amount,
-        uint256 startTime,
-        uint256 endTime,
-        uint256 step
-    );
+    event VestingScheduleAdded(address indexed user, uint256 amount, uint256 startTime, uint256 endTime, uint256 step);
     event VestingScheduleRemoved(address indexed user);
     event TokenVested(address indexed user, uint256 amount);
 
@@ -43,13 +37,8 @@ contract TokenEscrow is OwnableUpgradeable {
     IERC20Upgradeable public token;
     mapping(address => VestingSchedule) public vestingSchedules;
 
-    function getWithdrawableAmount(address user)
-        external
-        view
-        returns (uint256)
-    {
-        (uint256 withdrawableFromVesting,,) =
-            calculateWithdrawableFromVesting(user);
+    function getWithdrawableAmount(address user) external view returns (uint256) {
+        (uint256 withdrawableFromVesting,,) = calculateWithdrawableFromVesting(user);
 
         return withdrawableFromVesting;
     }
@@ -61,39 +50,20 @@ contract TokenEscrow is OwnableUpgradeable {
         token = _token;
     }
 
-    function setVestingSchedule(
-        address user,
-        uint256 amount,
-        uint256 startTime,
-        uint256 endTime,
-        uint256 step
-    )
+    function setVestingSchedule(address user, uint256 amount, uint256 startTime, uint256 endTime, uint256 step)
         external
         onlyOwner
     {
         require(user != address(0), "TokenEscrow: zero address");
         require(amount > 0, "TokenEscrow: zero amount");
         require(startTime < endTime, "TokenEscrow: invalid time range");
-        require(
-            step > 0 && endTime.sub(startTime) % step == 0,
-            "TokenEscrow: invalid step"
-        );
-        require(
-            vestingSchedules[user].amount == 0,
-            "TokenEscrow: vesting schedule already exists"
-        );
+        require(step > 0 && endTime.sub(startTime) % step == 0, "TokenEscrow: invalid step");
+        require(vestingSchedules[user].amount == 0, "TokenEscrow: vesting schedule already exists");
 
         // Overflow checks
-        require(
-            uint256(uint128(amount)) == amount, "TokenEscrow: amount overflow"
-        );
-        require(
-            uint256(uint32(startTime)) == startTime,
-            "TokenEscrow: startTime overflow"
-        );
-        require(
-            uint256(uint32(endTime)) == endTime, "TokenEscrow: endTime overflow"
-        );
+        require(uint256(uint128(amount)) == amount, "TokenEscrow: amount overflow");
+        require(uint256(uint32(startTime)) == startTime, "TokenEscrow: startTime overflow");
+        require(uint256(uint32(endTime)) == endTime, "TokenEscrow: endTime overflow");
         require(uint256(uint32(step)) == step, "TokenEscrow: step overflow");
 
         vestingSchedules[user] = VestingSchedule({
@@ -108,10 +78,7 @@ contract TokenEscrow is OwnableUpgradeable {
     }
 
     function removeVestingSchedule(address user) external onlyOwner {
-        require(
-            vestingSchedules[user].amount != 0,
-            "TokenEscrow: vesting schedule not set"
-        );
+        require(vestingSchedules[user].amount != 0, "TokenEscrow: vesting schedule not set");
 
         delete vestingSchedules[user];
 
@@ -125,16 +92,14 @@ contract TokenEscrow is OwnableUpgradeable {
         {
             uint256 newClaimTime;
             bool allVested;
-            (withdrawableFromVesting, newClaimTime, allVested) =
-                calculateWithdrawableFromVesting(msg.sender);
+            (withdrawableFromVesting, newClaimTime, allVested) = calculateWithdrawableFromVesting(msg.sender);
 
             if (withdrawableFromVesting > 0) {
                 if (allVested) {
                     // Remove storage slot to save gas
                     delete vestingSchedules[msg.sender];
                 } else {
-                    vestingSchedules[msg.sender].lastClaimTime =
-                        uint32(newClaimTime);
+                    vestingSchedules[msg.sender].lastClaimTime = uint32(newClaimTime);
                 }
             }
         }
@@ -164,9 +129,9 @@ contract TokenEscrow is OwnableUpgradeable {
         }
 
         uint256 currentStepTime = MathUpgradeable.min(
-            block.timestamp.sub(uint256(vestingSchedule.startTime)).div(
+            block.timestamp.sub(uint256(vestingSchedule.startTime)).div(uint256(vestingSchedule.step)).mul(
                 uint256(vestingSchedule.step)
-            ).mul(uint256(vestingSchedule.step)).add(uint256(vestingSchedule.startTime)),
+            ).add(uint256(vestingSchedule.startTime)),
             uint256(vestingSchedule.endTime)
         );
 
@@ -174,28 +139,22 @@ contract TokenEscrow is OwnableUpgradeable {
             return (0, 0, false);
         }
 
-        uint256 totalSteps = uint256(vestingSchedule.endTime).sub(
-            uint256(vestingSchedule.startTime)
-        ).div(vestingSchedule.step);
+        uint256 totalSteps =
+            uint256(vestingSchedule.endTime).sub(uint256(vestingSchedule.startTime)).div(vestingSchedule.step);
 
         if (currentStepTime == uint256(vestingSchedule.endTime)) {
             // All vested
 
-            uint256 stepsVested = uint256(vestingSchedule.lastClaimTime).sub(
-                uint256(vestingSchedule.startTime)
-            ).div(vestingSchedule.step);
-            uint256 amountToVest = uint256(vestingSchedule.amount).sub(
-                uint256(vestingSchedule.amount).div(totalSteps).mul(stepsVested)
-            );
+            uint256 stepsVested =
+                uint256(vestingSchedule.lastClaimTime).sub(uint256(vestingSchedule.startTime)).div(vestingSchedule.step);
+            uint256 amountToVest =
+                uint256(vestingSchedule.amount).sub(uint256(vestingSchedule.amount).div(totalSteps).mul(stepsVested));
 
             return (amountToVest, currentStepTime, true);
         } else {
             // Partially vested
-            uint256 stepsToVest = currentStepTime.sub(
-                uint256(vestingSchedule.lastClaimTime)
-            ).div(vestingSchedule.step);
-            uint256 amountToVest =
-                uint256(vestingSchedule.amount).div(totalSteps).mul(stepsToVest);
+            uint256 stepsToVest = currentStepTime.sub(uint256(vestingSchedule.lastClaimTime)).div(vestingSchedule.step);
+            uint256 amountToVest = uint256(vestingSchedule.amount).div(totalSteps).mul(stepsToVest);
 
             return (amountToVest, currentStepTime, false);
         }

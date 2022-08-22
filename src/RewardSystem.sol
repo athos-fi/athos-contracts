@@ -2,8 +2,7 @@
 pragma solidity =0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import
-    "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "./interfaces/ICollateralSystem.sol";
@@ -15,12 +14,7 @@ contract RewardSystem is OwnableUpgradeable {
 
     event RewardSignerChanged(address oldSigner, address newSigner);
     event RewardLockerAddressChanged(address oldAddress, address newAddress);
-    event RewardClaimed(
-        address recipient,
-        uint256 periodId,
-        uint256 stakingReward,
-        uint256 feeReward
-    );
+    event RewardClaimed(address recipient, uint256 periodId, uint256 stakingReward, uint256 feeReward);
 
     uint256 public firstPeriodStartTime;
     address public rewardSigner;
@@ -33,27 +27,19 @@ contract RewardSystem is OwnableUpgradeable {
     bytes32 public DOMAIN_SEPARATOR; // For EIP-712
 
     /* EIP-712 type hashes */
-    bytes32 public constant REWARD_TYPEHASH = keccak256(
-        "Reward(uint256 periodId,address recipient,uint256 stakingReward,uint256 feeReward)"
-    );
+    bytes32 public constant REWARD_TYPEHASH =
+        keccak256("Reward(uint256 periodId,address recipient,uint256 stakingReward,uint256 feeReward)");
 
     uint256 public constant PERIOD_LENGTH = 1 weeks;
     uint256 public constant CLAIM_WINDOW_PERIOD_COUNT = 2;
     uint256 public constant STAKING_REWARD_LOCK_PERIOD = 52 weeks;
 
     function getCurrentPeriodId() public view returns (uint256) {
-        require(
-            block.timestamp >= firstPeriodStartTime,
-            "RewardSystem: first period not started"
-        );
+        require(block.timestamp >= firstPeriodStartTime, "RewardSystem: first period not started");
         return (block.timestamp - firstPeriodStartTime) / PERIOD_LENGTH + 1; // No SafeMath needed
     }
 
-    function getPeriodStartTime(uint256 periodId)
-        public
-        view
-        returns (uint256)
-    {
+    function getPeriodStartTime(uint256 periodId) public view returns (uint256) {
         require(periodId > 0, "RewardSystem: period ID must be positive");
         return firstPeriodStartTime.add(periodId.sub(1).mul(PERIOD_LENGTH));
     }
@@ -75,18 +61,14 @@ contract RewardSystem is OwnableUpgradeable {
     {
         __Ownable_init();
 
-        require(
-            block.timestamp < _firstPeriodStartTime + PERIOD_LENGTH,
-            "RewardSystem: first period already ended"
-        );
+        require(block.timestamp < _firstPeriodStartTime + PERIOD_LENGTH, "RewardSystem: first period already ended");
 
         firstPeriodStartTime = _firstPeriodStartTime;
 
         _setRewardSigner(_rewardSigner);
 
         require(
-            _lusdAddress != address(0) && _collateralSystemAddress != address(0)
-                && _rewardLockerAddress != address(0),
+            _lusdAddress != address(0) && _collateralSystemAddress != address(0) && _rewardLockerAddress != address(0),
             "RewardSystem: zero address"
         );
         lusd = IERC20Upgradeable(_lusdAddress);
@@ -101,9 +83,7 @@ contract RewardSystem is OwnableUpgradeable {
         }
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
-                keccak256(
-                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-                ),
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256(bytes("Athos")),
                 keccak256(bytes("1")),
                 chainId,
@@ -116,19 +96,11 @@ contract RewardSystem is OwnableUpgradeable {
         _setRewardSigner(_rewardSigner);
     }
 
-    function setRewardLockerAddress(address _rewardLockerAddress)
-        external
-        onlyOwner
-    {
+    function setRewardLockerAddress(address _rewardLockerAddress) external onlyOwner {
         _setRewardLockerAddress(_rewardLockerAddress);
     }
 
-    function claimReward(
-        uint256 periodId,
-        uint256 stakingReward,
-        uint256 feeReward,
-        bytes calldata signature
-    )
+    function claimReward(uint256 periodId, uint256 stakingReward, uint256 feeReward, bytes calldata signature)
         external
     {
         _claimReward(periodId, msg.sender, stakingReward, feeReward, signature);
@@ -148,9 +120,7 @@ contract RewardSystem is OwnableUpgradeable {
 
     function _setRewardSigner(address _rewardSigner) private {
         require(_rewardSigner != address(0), "RewardSystem: zero address");
-        require(
-            _rewardSigner != rewardSigner, "RewardSystem: signer not changed"
-        );
+        require(_rewardSigner != rewardSigner, "RewardSystem: signer not changed");
 
         address oldSigner = rewardSigner;
         rewardSigner = _rewardSigner;
@@ -159,13 +129,8 @@ contract RewardSystem is OwnableUpgradeable {
     }
 
     function _setRewardLockerAddress(address _rewardLockerAddress) private {
-        require(
-            _rewardLockerAddress != address(0), "RewardSystem: zero address"
-        );
-        require(
-            _rewardLockerAddress != address(rewardLocker),
-            "RewardSystem: address not changed"
-        );
+        require(_rewardLockerAddress != address(0), "RewardSystem: zero address");
+        require(_rewardLockerAddress != address(rewardLocker), "RewardSystem: address not changed");
 
         address oldAddress = address(rewardLocker);
         rewardLocker = IRewardLocker(_rewardLockerAddress);
@@ -183,53 +148,36 @@ contract RewardSystem is OwnableUpgradeable {
         private
     {
         require(periodId > 0, "RewardSystem: period ID must be positive");
-        require(
-            stakingReward > 0 || feeReward > 0, "RewardSystem: nothing to claim"
-        );
+        require(stakingReward > 0 || feeReward > 0, "RewardSystem: nothing to claim");
 
         // Check if the target period is in the claiming window
         uint256 currentPeriodId = getCurrentPeriodId();
         require(periodId < currentPeriodId, "RewardSystem: period not ended");
         require(
-            currentPeriodId <= CLAIM_WINDOW_PERIOD_COUNT
-                || periodId >= currentPeriodId - CLAIM_WINDOW_PERIOD_COUNT,
+            currentPeriodId <= CLAIM_WINDOW_PERIOD_COUNT || periodId >= currentPeriodId - CLAIM_WINDOW_PERIOD_COUNT,
             "RewardSystem: reward expired"
         );
 
         // Re-entrance prevention
-        require(
-            userLastClaimPeriodIds[recipient] < periodId,
-            "RewardSystem: reward already claimed"
-        );
+        require(userLastClaimPeriodIds[recipient] < periodId, "RewardSystem: reward already claimed");
         userLastClaimPeriodIds[recipient] = periodId;
 
         // Users can only claim rewards if target ratio is satisfied
-        require(
-            collateralSystem.IsSatisfyTargetRatio(recipient),
-            "RewardSystem: below target ratio"
-        );
+        require(collateralSystem.IsSatisfyTargetRatio(recipient), "RewardSystem: below target ratio");
 
         // Verify EIP-712 signature
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
                 DOMAIN_SEPARATOR,
-                keccak256(
-                    abi.encode(REWARD_TYPEHASH, periodId, recipient, stakingReward, feeReward)
-                )
+                keccak256(abi.encode(REWARD_TYPEHASH, periodId, recipient, stakingReward, feeReward))
             )
         );
         address recoveredAddress = digest.recover(signature);
-        require(
-            recoveredAddress == rewardSigner, "RewardSystem: invalid signature"
-        );
+        require(recoveredAddress == rewardSigner, "RewardSystem: invalid signature");
 
         if (stakingReward > 0) {
-            rewardLocker.addReward(
-                recipient,
-                stakingReward,
-                getPeriodEndTime(periodId) + STAKING_REWARD_LOCK_PERIOD
-            );
+            rewardLocker.addReward(recipient, stakingReward, getPeriodEndTime(periodId) + STAKING_REWARD_LOCK_PERIOD);
         }
 
         if (feeReward > 0) {

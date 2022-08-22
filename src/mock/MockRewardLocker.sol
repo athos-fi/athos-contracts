@@ -10,29 +10,16 @@ contract MockRewardLocker {
 
     AppendRewardArgs[] appendRewardCalls;
 
-    function lastAppendRewardCall()
-        public
-        view
-        returns (AppendRewardArgs memory)
-    {
-        AppendRewardArgs memory args =
-            appendRewardCalls[appendRewardCalls.length - 1];
+    function lastAppendRewardCall() public view returns (AppendRewardArgs memory) {
+        AppendRewardArgs memory args = appendRewardCalls[appendRewardCalls.length - 1];
         return args;
     }
 
-    function allAppendRewardCalls()
-        public
-        view
-        returns (AppendRewardArgs[] memory)
-    {
+    function allAppendRewardCalls() public view returns (AppendRewardArgs[] memory) {
         return appendRewardCalls;
     }
 
-    function addReward(address _user, uint256 _amount, uint256 _lockTo)
-        external
-    {
-        appendRewardCalls.push(
-            AppendRewardArgs({_user: _user, _amount: _amount, _lockTo: _lockTo})
-        );
+    function addReward(address _user, uint256 _amount, uint256 _lockTo) external {
+        appendRewardCalls.push(AppendRewardArgs({_user: _user, _amount: _amount, _lockTo: _lockTo}));
     }
 }

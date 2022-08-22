@@ -12,11 +12,7 @@ interface IUniswapCheckpoints {
         view
         returns (uint256 priceCumulative);
 
-    function getLatestCheckpointOlderThan(
-        address baseToken,
-        address quoteToken,
-        uint256 minAge
-    )
+    function getLatestCheckpointOlderThan(address baseToken, address quoteToken, uint256 minAge)
         external
         view
         returns (Checkpoint memory checkpoint);

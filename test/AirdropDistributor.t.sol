@@ -21,8 +21,7 @@ contract AirdropDistributorTest is Test {
 
     address private constant ALICE = 0x0000000000000000000000000000000000000011;
     address private constant BOB = 0x0000000000000000000000000000000000000022;
-    address private constant CHARLIE =
-        0x0000000000000000000000000000000000000033;
+    address private constant CHARLIE = 0x0000000000000000000000000000000000000033;
 
     function setUp() public {
         payable(ALICE).transfer(1000 ether);
@@ -126,8 +125,7 @@ contract AirdropDistributorTest is Test {
         // Locked
         assertEq(athToken.balanceOf(address(rewardLocker)), 90e18);
 
-        MockRewardLocker.AppendRewardArgs[] memory lockedEntries =
-            rewardLocker.allAppendRewardCalls();
+        MockRewardLocker.AppendRewardArgs[] memory lockedEntries = rewardLocker.allAppendRewardCalls();
         assertEq(lockedEntries.length, 10);
         assertEq(lockedEntries[0]._amount, 9e18);
         assertEq(lockedEntries[0]._lockTo, firstUnlockTime);
@@ -203,9 +201,7 @@ contract AirdropDistributorTest is Test {
         airdrop.forceClaim(ALICE);
     }
 
-    function testCanOnlyWithdrawRemainingTokensOnceDeadlineIsReached_1()
-        public
-    {
+    function testCanOnlyWithdrawRemainingTokensOnceDeadlineIsReached_1() public {
         vm.warp(startTime);
 
         vm.prank(ALICE);
@@ -217,9 +213,7 @@ contract AirdropDistributorTest is Test {
         airdrop.withdrawRemaining();
     }
 
-    function testCanOnlyWithdrawRemainingTokensOnceDeadlineIsReached_2()
-        public
-    {
+    function testCanOnlyWithdrawRemainingTokensOnceDeadlineIsReached_2() public {
         vm.warp(startTime);
 
         vm.prank(ALICE);

@@ -22,15 +22,10 @@ contract AssetRegistry is IAssetRegistry, OwnableUpgradeable {
     mapping(bytes32 => address) public perpAddresses;
     mapping(address => bytes32) public perpSymbols;
 
-    function __AssetRegistry_init(IOracleRouter _oracleRouter)
-        public
-        initializer
-    {
+    function __AssetRegistry_init(IOracleRouter _oracleRouter) public initializer {
         __Ownable_init();
 
-        require(
-            address(_oracleRouter) != address(0), "AssetRegistry: zero address"
-        );
+        require(address(_oracleRouter) != address(0), "AssetRegistry: zero address");
 
         oracleRouter = _oracleRouter;
     }
@@ -38,14 +33,8 @@ contract AssetRegistry is IAssetRegistry, OwnableUpgradeable {
     function addAsset(IAsset asset) external onlyOwner {
         bytes32 name = asset.keyName();
 
-        require(
-            assetSymbolToAddresses[name] == address(0),
-            "AssetRegistry: asset already exists"
-        );
-        require(
-            mAddress2Names[address(asset)] == bytes32(0),
-            "AssetRegistry: asset address already exists"
-        );
+        require(assetSymbolToAddresses[name] == address(0), "AssetRegistry: asset already exists");
+        require(mAddress2Names[address(asset)] == bytes32(0), "AssetRegistry: asset address already exists");
 
         mAssetList.push(asset);
         assetSymbolToAddresses[name] = address(asset);
@@ -57,9 +46,7 @@ contract AssetRegistry is IAssetRegistry, OwnableUpgradeable {
     function removeAsset(bytes32 name) external onlyOwner {
         address assetToRemove = address(assetSymbolToAddresses[name]);
 
-        require(
-            assetToRemove != address(0), "AssetRegistry: asset does not exist"
-        );
+        require(assetToRemove != address(0), "AssetRegistry: asset does not exist");
 
         // Remove from list
         for (uint256 i = 0; i < mAssetList.length; i++) {
@@ -82,10 +69,7 @@ contract AssetRegistry is IAssetRegistry, OwnableUpgradeable {
         require(address(perp) != address(0), "AssetRegistry: zero address");
 
         bytes32 symbol = perp.underlyingTokenSymbol();
-        require(
-            perpAddresses[symbol] == address(0),
-            "AssetRegistry: perp already exists"
-        );
+        require(perpAddresses[symbol] == address(0), "AssetRegistry: perp already exists");
 
         perpAddresses[symbol] = address(perp);
         perpSymbols[address(perp)] = symbol;
@@ -104,14 +88,11 @@ contract AssetRegistry is IAssetRegistry, OwnableUpgradeable {
             uint256 exchangeRate = oracleRouter.getPrice(assetSymbol);
             address perpAddress = perpAddresses[assetSymbol];
 
-            totalSupplyValue = totalSupplyValue.add(
-                IERC20Upgradeable(asset).totalSupply().multiplyDecimal(exchangeRate)
-            );
+            totalSupplyValue =
+                totalSupplyValue.add(IERC20Upgradeable(asset).totalSupply().multiplyDecimal(exchangeRate));
 
             if (perpAddress != address(0)) {
-                totalPerpDebtValue = totalPerpDebtValue.add(
-                    IPerpetual(perpAddress).totalUsdDebt()
-                ).add(
+                totalPerpDebtValue = totalPerpDebtValue.add(IPerpetual(perpAddress).totalUsdDebt()).add(
                     IPerpetual(perpAddress).totalUnderlyingDebt().multiplyDecimal(exchangeRate)
                 );
             }
@@ -128,11 +109,7 @@ contract AssetRegistry is IAssetRegistry, OwnableUpgradeable {
         return addr;
     }
 
-    function isPerpAddressRegistered(address perpAddress)
-        external
-        view
-        returns (bool)
-    {
+    function isPerpAddressRegistered(address perpAddress) external view returns (bool) {
         return perpSymbols[perpAddress] != bytes32(0);
     }
 

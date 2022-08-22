@@ -20,13 +20,7 @@ contract MockChainlinkAggregator is IChainlinkOracle {
         external
         view
         override
-        returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        )
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
         roundId = _roundId;
         answer = _answer;

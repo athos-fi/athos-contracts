@@ -56,17 +56,9 @@ contract AirdropDistributor is OwnableUpgradeable {
     {
         __Ownable_init();
 
-        require(
-            _deadline > block.timestamp && _startTime < _deadline,
-            "AirdropDistributor: invalid timestamps"
-        );
-        require(
-            address(_rewardLocker) != address(0),
-            "AirdropDistributor: zero address"
-        );
-        require(
-            address(_token) != address(0), "AirdropDistributor: zero address"
-        );
+        require(_deadline > block.timestamp && _startTime < _deadline, "AirdropDistributor: invalid timestamps");
+        require(address(_rewardLocker) != address(0), "AirdropDistributor: zero address");
+        require(address(_token) != address(0), "AirdropDistributor: zero address");
 
         startTime = _startTime;
         deadline = _deadline;
@@ -94,17 +86,8 @@ contract AirdropDistributor is OwnableUpgradeable {
         emit FirstUnlockTimeChanged(_firstUnlockTime);
     }
 
-    function importAirdropEntries(
-        address[] calldata recipients,
-        uint256[] calldata amounts
-    )
-        external
-        onlyOwner
-    {
-        require(
-            recipients.length == amounts.length,
-            "AirdropDistributor: array length mismatch"
-        );
+    function importAirdropEntries(address[] calldata recipients, uint256[] calldata amounts) external onlyOwner {
+        require(recipients.length == amounts.length, "AirdropDistributor: array length mismatch");
 
         uint256 totalAmount = 0;
         for (uint256 ind = 0; ind < recipients.length; ind++) {
@@ -116,10 +99,7 @@ contract AirdropDistributor is OwnableUpgradeable {
     }
 
     function withdrawRemaining() external onlyOwner {
-        require(
-            block.timestamp >= deadline,
-            "AirdropDistributor: deadline not reached"
-        );
+        require(block.timestamp >= deadline, "AirdropDistributor: deadline not reached");
 
         uint256 balance = token.balanceOf(address(this));
         require(balance > 0, "AirdropDistributor: no token to withdraw");
@@ -131,9 +111,7 @@ contract AirdropDistributor is OwnableUpgradeable {
 
     function claim(address recipient) external {
         require(block.timestamp >= startTime, "AirdropDistributor: not started");
-        require(
-            block.timestamp < deadline, "AirdropDistributor: deadline reached"
-        );
+        require(block.timestamp < deadline, "AirdropDistributor: deadline reached");
         _claim(recipient);
     }
 
@@ -143,49 +121,32 @@ contract AirdropDistributor is OwnableUpgradeable {
 
     function _claim(address recipient) private {
         AirdropEntry memory airdropEntry = airdropEntries[recipient];
-        require(
-            airdropEntry.amount > 0, "AirdropDistributor: no token to claim"
-        );
+        require(airdropEntry.amount > 0, "AirdropDistributor: no token to claim");
         require(!airdropEntry.claimed, "AirdropDistributor: already claimed");
 
-        airdropEntries[recipient] = AirdropEntry({
-            amount: airdropEntry.amount,
-            claimed: true,
-            claimTime: block.timestamp.toUint32()
-        });
+        airdropEntries[recipient] =
+            AirdropEntry({amount: airdropEntry.amount, claimed: true, claimTime: block.timestamp.toUint32()});
 
-        uint256 immediatelyUnlockedAmount =
-            airdropEntry.amount * unlockedPercentage / 100;
+        uint256 immediatelyUnlockedAmount = airdropEntry.amount * unlockedPercentage / 100;
         if (immediatelyUnlockedAmount != 0) {
             token.transfer(recipient, immediatelyUnlockedAmount);
         }
 
-        uint256 amountEachPeriod =
-            (airdropEntry.amount - immediatelyUnlockedAmount) / unlockCount;
+        uint256 amountEachPeriod = (airdropEntry.amount - immediatelyUnlockedAmount) / unlockCount;
         if (amountEachPeriod > 0) {
             for (uint256 indPeriod = 0; indPeriod < unlockCount; indPeriod++) {
-                rewardLocker.addReward(
-                    recipient,
-                    amountEachPeriod,
-                    firstUnlockTime + indPeriod * unlockInterval
-                );
+                rewardLocker.addReward(recipient, amountEachPeriod, firstUnlockTime + indPeriod * unlockInterval);
             }
 
-            token.transfer(
-                address(rewardLocker), amountEachPeriod * unlockCount
-            );
+            token.transfer(address(rewardLocker), amountEachPeriod * unlockCount);
         }
 
         emit AirdropClaimed(msg.sender, recipient, airdropEntry.amount);
     }
 
     function _importAirdropEntry(address recipient, uint256 amount) private {
-        require(
-            airdropEntries[recipient].amount == 0,
-            "AirdropDistributor: entry already exists"
-        );
-        airdropEntries[recipient] =
-            AirdropEntry({amount: amount.toUint128(), claimed: false, claimTime: 0});
+        require(airdropEntries[recipient].amount == 0, "AirdropDistributor: entry already exists");
+        airdropEntries[recipient] = AirdropEntry({amount: amount.toUint128(), claimed: false, claimTime: 0});
 
         emit AirdropEntryAdded(recipient, amount);
     }

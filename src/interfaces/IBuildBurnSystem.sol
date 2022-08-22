@@ -8,10 +8,5 @@ interface IBuildBurnSystem {
 
     function burnFromCollateralSys(address user, uint256 amount) external;
 
-    function burnForLiquidation(
-        address user,
-        address liquidator,
-        uint256 amount
-    )
-        external;
+    function burnForLiquidation(address user, address liquidator, uint256 amount) external;
 }

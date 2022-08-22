@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.15;
 
-import
-    "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "./interfaces/IAsset.sol";
@@ -16,26 +15,17 @@ contract Asset is IAsset, ERC20Upgradeable, OwnableUpgradeable {
     bytes32 private constant ROLE_MOVE_ASSET = "MOVE_ASSET";
 
     modifier onlyIssueAssetRole() {
-        require(
-            accessCtrl.hasRole(ROLE_ISSUE_ASSET, msg.sender),
-            "Asset: not ISSUE_ASSET role"
-        );
+        require(accessCtrl.hasRole(ROLE_ISSUE_ASSET, msg.sender), "Asset: not ISSUE_ASSET role");
         _;
     }
 
     modifier onlyBurnAssetRole() {
-        require(
-            accessCtrl.hasRole(ROLE_BURN_ASSET, msg.sender),
-            "Asset: not BURN_ASSET role"
-        );
+        require(accessCtrl.hasRole(ROLE_BURN_ASSET, msg.sender), "Asset: not BURN_ASSET role");
         _;
     }
 
     modifier onlyMoveAssetRole() {
-        require(
-            accessCtrl.hasRole(ROLE_MOVE_ASSET, msg.sender),
-            "Asset: not MOVE_ASSET role"
-        );
+        require(accessCtrl.hasRole(ROLE_MOVE_ASSET, msg.sender), "Asset: not MOVE_ASSET role");
         _;
     }
 
@@ -61,10 +51,7 @@ contract Asset is IAsset, ERC20Upgradeable, OwnableUpgradeable {
         return mKeyName;
     }
 
-    function mint(address account, uint256 amount)
-        external
-        onlyIssueAssetRole
-    {
+    function mint(address account, uint256 amount) external onlyIssueAssetRole {
         _mint(account, amount);
     }
 
@@ -72,10 +59,7 @@ contract Asset is IAsset, ERC20Upgradeable, OwnableUpgradeable {
         _burn(account, amount);
     }
 
-    function move(address from, address to, uint256 amount)
-        external
-        onlyMoveAssetRole
-    {
+    function move(address from, address to, uint256 amount) external onlyMoveAssetRole {
         _transfer(from, to, amount);
     }
 }

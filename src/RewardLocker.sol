@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.15;
 
-import
-    "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
@@ -13,13 +12,9 @@ import "./interfaces/IRewardLocker.sol";
 contract RewardLocker is IRewardLocker, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
 
-    event RewardEntryAdded(
-        uint256 entryId, address user, uint256 amount, uint256 unlockTime
-    );
+    event RewardEntryAdded(uint256 entryId, address user, uint256 amount, uint256 unlockTime);
     event RewardEntryRemoved(uint256 entryId);
-    event RewardAmountChanged(
-        uint256 entryId, uint256 oldAmount, uint256 newAmount
-    );
+    event RewardAmountChanged(uint256 entryId, uint256 oldAmount, uint256 newAmount);
     event RewardEntryUnlocked(uint256 entryId, address user, uint256 amount);
 
     /**
@@ -57,18 +52,12 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
     bytes32 private constant ROLE_MOVE_REWARD = "MOVE_REWARD";
 
     modifier onlyLockRewardRole() {
-        require(
-            accessCtrl.hasRole(ROLE_LOCK_REWARD, msg.sender),
-            "RewardLocker: not LOCK_REWARD role"
-        );
+        require(accessCtrl.hasRole(ROLE_LOCK_REWARD, msg.sender), "RewardLocker: not LOCK_REWARD role");
         _;
     }
 
     modifier onlyMoveRewardRole() {
-        require(
-            accessCtrl.hasRole(ROLE_MOVE_REWARD, msg.sender),
-            "RewardLocker: not MOVE_REWARD role"
-        );
+        require(accessCtrl.hasRole(ROLE_MOVE_REWARD, msg.sender), "RewardLocker: not MOVE_REWARD role");
         _;
     }
 
@@ -76,29 +65,17 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         return lockedAmountByAddresses[user];
     }
 
-    function __RewardLocker_init(
-        address _linaTokenAddr,
-        IAccessControlUpgradeable _accessCtrl
-    )
-        public
-        initializer
-    {
+    function __RewardLocker_init(address _linaTokenAddr, IAccessControlUpgradeable _accessCtrl) public initializer {
         __Ownable_init();
 
         require(_linaTokenAddr != address(0), "RewardLocker: zero address");
-        require(
-            address(_accessCtrl) != address(0), "RewardLocker: zero address"
-        );
+        require(address(_accessCtrl) != address(0), "RewardLocker: zero address");
 
         linaTokenAddr = _linaTokenAddr;
         accessCtrl = _accessCtrl;
     }
 
-    function addReward(address user, uint256 amount, uint256 unlockTime)
-        external
-        override
-        onlyLockRewardRole
-    {
+    function addReward(address user, uint256 amount, uint256 unlockTime) external override onlyLockRewardRole {
         _addReward(user, amount, unlockTime);
     }
 
@@ -106,38 +83,24 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
      * @dev A temporary function for migrating reward entries in bulk from the old contract.
      * To be removed via a contract upgrade after migration.
      */
-    function migrateRewards(
-        address[] calldata users,
-        uint256[] calldata amounts,
-        uint256[] calldata unlockTimes
-    )
+    function migrateRewards(address[] calldata users, uint256[] calldata amounts, uint256[] calldata unlockTimes)
         external
         onlyOwner
     {
         require(users.length > 0, "RewardLocker: empty array");
-        require(
-            users.length == amounts.length && amounts.length == unlockTimes.length,
-            "RewardLocker: length mismatch"
-        );
+        require(users.length == amounts.length && amounts.length == unlockTimes.length, "RewardLocker: length mismatch");
 
         for (uint256 ind = 0; ind < users.length; ind++) {
             _addReward(users[ind], amounts[ind], unlockTimes[ind]);
         }
     }
 
-    function moveReward(
-        address from,
-        address recipient,
-        uint256 amount,
-        uint256[] calldata rewardEntryIds
-    )
+    function moveReward(address from, address recipient, uint256 amount, uint256[] calldata rewardEntryIds)
         external
         override
         onlyMoveRewardRole
     {
-        _moveRewardProRata(
-            from, recipient, amount, address(0), 0, rewardEntryIds
-        );
+        _moveRewardProRata(from, recipient, amount, address(0), 0, rewardEntryIds);
     }
 
     function moveRewardProRata(
@@ -152,30 +115,16 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         override
         onlyMoveRewardRole
     {
-        _moveRewardProRata(
-            from, recipient1, amount1, recipient2, amount2, rewardEntryIds
-        );
+        _moveRewardProRata(from, recipient1, amount1, recipient2, amount2, rewardEntryIds);
     }
 
-    function updateCollateralSystemAddress(address _collateralSystemAddr)
-        external
-        onlyOwner
-    {
-        require(
-            _collateralSystemAddr != address(0),
-            "RewardLocker: Collateral system address must not be 0"
-        );
+    function updateCollateralSystemAddress(address _collateralSystemAddr) external onlyOwner {
+        require(_collateralSystemAddr != address(0), "RewardLocker: Collateral system address must not be 0");
         collateralSystemAddr = _collateralSystemAddr;
     }
 
-    function updateRewarderAddress(address _rewarderAddress)
-        external
-        onlyOwner
-    {
-        require(
-            _rewarderAddress != address(0),
-            "RewardLocker: Rewarder address must not be 0"
-        );
+    function updateRewarderAddress(address _rewarderAddress) external onlyOwner {
+        require(_rewarderAddress != address(0), "RewardLocker: Rewarder address must not be 0");
         rewarderAddress = _rewarderAddress;
     }
 
@@ -183,16 +132,8 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         _unlockReward(user, rewardEntryId);
     }
 
-    function unlockRewards(
-        address[] calldata users,
-        uint256[] calldata rewardEntryIds
-    )
-        external
-    {
-        require(
-            users.length == rewardEntryIds.length,
-            "RewardLocker: array length mismatch"
-        );
+    function unlockRewards(address[] calldata users, uint256[] calldata rewardEntryIds) external {
+        require(users.length == rewardEntryIds.length, "RewardLocker: array length mismatch");
 
         for (uint256 ind = 0; ind < users.length; ind++) {
             _unlockReward(users[ind], rewardEntryIds[ind]);
@@ -208,14 +149,8 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         external
         onlyOwner
     {
-        require(
-            entriesIds.length > 0 && newAmounts.length > 0,
-            "RewardLocker: empty array"
-        );
-        require(
-            newAmounts.length == newUnlockTimes.length,
-            "RewardLocker: array length mismatch"
-        );
+        require(entriesIds.length > 0 && newAmounts.length > 0, "RewardLocker: empty array");
+        require(newAmounts.length == newUnlockTimes.length, "RewardLocker: array length mismatch");
 
         // Removes existing entries
         uint256 totalAmount = 0;
@@ -243,11 +178,8 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
 
             uint256 newRewardEntryId = lastRewardEntryId + ind + 1;
 
-            rewardEntries[newRewardEntryId][user] =
-                RewardEntry({amount: newAmount, unlockTime: newUnlockTime});
-            emit RewardEntryAdded(
-                newRewardEntryId, user, uint256(newAmount), uint256(newUnlockTime)
-                );
+            rewardEntries[newRewardEntryId][user] = RewardEntry({amount: newAmount, unlockTime: newUnlockTime});
+            emit RewardEntryAdded(newRewardEntryId, user, uint256(newAmount), uint256(newUnlockTime));
         }
 
         require(totalAmount == 0, "RewardLocker: total amount mismatch");
@@ -255,65 +187,40 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         lastRewardEntryId += newAmounts.length;
     }
 
-    function _addReward(address user, uint256 amount, uint256 unlockTime)
-        private
-    {
+    function _addReward(address user, uint256 amount, uint256 unlockTime) private {
         require(amount > 0, "RewardLocker: zero amount");
 
         uint216 trimmedAmount = uint216(amount);
         uint40 trimmedUnlockTime = uint40(unlockTime);
-        require(
-            uint256(trimmedAmount) == amount,
-            "RewardLocker: reward amount overflow"
-        );
-        require(
-            uint256(trimmedUnlockTime) == unlockTime,
-            "RewardLocker: unlock time overflow"
-        );
+        require(uint256(trimmedAmount) == amount, "RewardLocker: reward amount overflow");
+        require(uint256(trimmedUnlockTime) == unlockTime, "RewardLocker: unlock time overflow");
 
         lastRewardEntryId++;
 
-        rewardEntries[lastRewardEntryId][user] =
-            RewardEntry({amount: trimmedAmount, unlockTime: trimmedUnlockTime});
-        lockedAmountByAddresses[user] =
-            lockedAmountByAddresses[user].add(amount);
+        rewardEntries[lastRewardEntryId][user] = RewardEntry({amount: trimmedAmount, unlockTime: trimmedUnlockTime});
+        lockedAmountByAddresses[user] = lockedAmountByAddresses[user].add(amount);
         totalLockedAmount = totalLockedAmount.add(amount);
 
         emit RewardEntryAdded(lastRewardEntryId, user, amount, unlockTime);
     }
 
     function _unlockReward(address user, uint256 rewardEntryId) private {
-        require(
-            rewarderAddress != address(0),
-            "RewardLocker: Rewarder address not set"
-        );
-        require(
-            collateralSystemAddr != address(0),
-            "RewardLocker: Collateral system address not set"
-        );
+        require(rewarderAddress != address(0), "RewardLocker: Rewarder address not set");
+        require(collateralSystemAddr != address(0), "RewardLocker: Collateral system address not set");
 
         RewardEntry memory rewardEntry = rewardEntries[rewardEntryId][user];
-        require(
-            rewardEntry.amount > 0,
-            "RewardLocker: Reward entry amount is 0, no reward to unlock"
-        );
-        require(
-            block.timestamp >= rewardEntry.unlockTime,
-            "RewardLocker: Unlock time not reached"
-        );
+        require(rewardEntry.amount > 0, "RewardLocker: Reward entry amount is 0, no reward to unlock");
+        require(block.timestamp >= rewardEntry.unlockTime, "RewardLocker: Unlock time not reached");
 
         if (rewarderAddress == address(this)) {
-            IERC20Upgradeable(linaTokenAddr).approve(
-                collateralSystemAddr, rewardEntry.amount
-            );
+            IERC20Upgradeable(linaTokenAddr).approve(collateralSystemAddr, rewardEntry.amount);
         }
 
         ICollateralSystem(collateralSystemAddr).collateralFromUnlockReward(
             user, rewarderAddress, "ATH", rewardEntry.amount
         );
 
-        lockedAmountByAddresses[user] =
-            lockedAmountByAddresses[user].sub(rewardEntry.amount);
+        lockedAmountByAddresses[user] = lockedAmountByAddresses[user].sub(rewardEntry.amount);
         totalLockedAmount = totalLockedAmount.sub(rewardEntry.amount);
         emit RewardEntryUnlocked(rewardEntryId, user, rewardEntry.amount);
 
@@ -333,12 +240,8 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
     {
         // Check amount and adjust from balance directly
         uint256 totalAmount = amount1.add(amount2);
-        require(
-            totalAmount > 0 && totalAmount <= lockedAmountByAddresses[from],
-            "RewardLocker: amount out of range"
-        );
-        lockedAmountByAddresses[from] =
-            lockedAmountByAddresses[from].sub(totalAmount);
+        require(totalAmount > 0 && totalAmount <= lockedAmountByAddresses[from], "RewardLocker: amount out of range");
+        lockedAmountByAddresses[from] = lockedAmountByAddresses[from].sub(totalAmount);
 
         uint256 amount1Left = amount1;
         uint256 amount2Left = amount2;
@@ -365,18 +268,14 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         }
 
         // Ensure all amounts are distributed
-        require(
-            amount1Left == 0 && amount2Left == 0,
-            "RewardLocker: amount not filled with all entries"
-        );
+        require(amount1Left == 0 && amount2Left == 0, "RewardLocker: amount not filled with all entries");
     }
 
     function moveRewardEntry(MoveEntryParams memory params)
         private
         returns (uint256 amount1LeftAfter, uint256 amount2LeftAfter)
     {
-        RewardEntry memory currentRewardEntry =
-            rewardEntries[params.rewardEntryId][params.from];
+        RewardEntry memory currentRewardEntry = rewardEntries[params.rewardEntryId][params.from];
         if (currentRewardEntry.amount == 0) {
             /**
              * This reward entry is gone. We're not reverting the tx here because it's possible for
@@ -388,8 +287,7 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
 
         uint256 totalAmountLeft = params.amount1Left.add(params.amount2Left);
 
-        uint256 currentAmount =
-            MathUpgradeable.min(totalAmountLeft, currentRewardEntry.amount);
+        uint256 currentAmount = MathUpgradeable.min(totalAmountLeft, currentRewardEntry.amount);
         if (currentAmount == currentRewardEntry.amount) {
             // Entry should be removed
             delete rewardEntries[params.rewardEntryId][params.from];
@@ -397,15 +295,11 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
             emit RewardEntryRemoved(params.rewardEntryId);
         } else {
             // Entry should be amended
-            uint256 newAmount =
-                uint256(currentRewardEntry.amount).sub(currentAmount);
+            uint256 newAmount = uint256(currentRewardEntry.amount).sub(currentAmount);
 
-            rewardEntries[params.rewardEntryId][params.from].amount =
-                uint216(newAmount);
+            rewardEntries[params.rewardEntryId][params.from].amount = uint216(newAmount);
 
-            emit RewardAmountChanged(
-                params.rewardEntryId, currentRewardEntry.amount, newAmount
-                );
+            emit RewardAmountChanged(params.rewardEntryId, currentRewardEntry.amount, newAmount);
         }
 
         uint256 currentAmountTo1;
@@ -418,27 +312,19 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         } else {
             // Pro-rata allocation
             currentAmountTo1 = MathUpgradeable.min(
-                params.amount1Left,
-                currentAmount.mul(params.amount1).div(params.amount1.add(params.amount2))
+                params.amount1Left, currentAmount.mul(params.amount1).div(params.amount1.add(params.amount2))
             );
             currentAmountTo2 = currentAmount.sub(currentAmountTo1);
         }
 
         if (currentAmountTo1 > 0) {
-            _addReward(
-                params.recipient1, currentAmountTo1, currentRewardEntry.unlockTime
-            );
+            _addReward(params.recipient1, currentAmountTo1, currentRewardEntry.unlockTime);
         }
 
         if (currentAmountTo2 > 0) {
-            _addReward(
-                params.recipient2, currentAmountTo2, currentRewardEntry.unlockTime
-            );
+            _addReward(params.recipient2, currentAmountTo2, currentRewardEntry.unlockTime);
         }
 
-        return (
-            params.amount1Left.sub(currentAmountTo1),
-            params.amount2Left.sub(currentAmountTo2)
-        );
+        return (params.amount1Left.sub(currentAmountTo1), params.amount2Left.sub(currentAmountTo2));
     }
 }

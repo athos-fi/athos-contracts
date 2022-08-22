@@ -15,16 +15,10 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
     using SafeDecimalMath for uint256;
     using SafeMathUpgradeable for uint256;
 
-    event GlobalStalePeriodUpdated(
-        uint256 oldStalePeriod, uint256 newStalePeriod
-    );
-    event StalePeriodOverrideUpdated(
-        bytes32 currencyKey, uint256 oldStalePeriod, uint256 newStalePeriod
-    );
+    event GlobalStalePeriodUpdated(uint256 oldStalePeriod, uint256 newStalePeriod);
+    event StalePeriodOverrideUpdated(bytes32 currencyKey, uint256 oldStalePeriod, uint256 newStalePeriod);
     event ChainlinkOracleAdded(bytes32 currencyKey, address oracle);
-    event BandOracleAdded(
-        bytes32 currencyKey, string bandCurrencyKey, address oracle
-    );
+    event BandOracleAdded(bytes32 currencyKey, string bandCurrencyKey, address oracle);
     event UniswapTwapOracleAdded(bytes32 currencyKey, address oracle);
     event TerminalPriceOracleAdded(bytes32 currencyKey, uint160 terminalPrice);
     event OracleRemoved(bytes32 currencyKey, address oracle);
@@ -48,21 +42,12 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
 
     uint8 private constant OUTPUT_PRICE_DECIMALS = 18;
 
-    function getPrice(bytes32 currencyKey)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function getPrice(bytes32 currencyKey) external view override returns (uint256) {
         (uint256 price,) = _getPriceData(currencyKey);
         return price;
     }
 
-    function getPriceAndUpdatedTime(bytes32 currencyKey)
-        external
-        view
-        returns (uint256 price, uint256 time)
-    {
+    function getPriceAndUpdatedTime(bytes32 currencyKey) external view returns (uint256 price, uint256 time) {
         (price, time) = _getPriceData(currencyKey);
     }
 
@@ -93,16 +78,10 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
             "OracleRouter: staled price data"
         );
 
-        return sourceAmount.multiplyDecimalRound(sourcePrice).divideDecimalRound(
-            destPrice
-        );
+        return sourceAmount.multiplyDecimalRound(sourcePrice).divideDecimalRound(destPrice);
     }
 
-    function getStalePeriodForCurrency(bytes32 currencyKey)
-        public
-        view
-        returns (uint256)
-    {
+    function getStalePeriodForCurrency(bytes32 currencyKey) public view returns (uint256) {
         uint256 overridenPeriod = stalePeriodOverrides[currencyKey];
         return overridenPeriod == 0 ? globalStalePeriod : overridenPeriod;
     }
@@ -117,25 +96,13 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         emit GlobalStalePeriodUpdated(oldStalePeriod, newStalePeriod);
     }
 
-    function setStalePeriodOverride(bytes32 currencyKey, uint256 newStalePeriod)
-        external
-        onlyOwner
-    {
+    function setStalePeriodOverride(bytes32 currencyKey, uint256 newStalePeriod) external onlyOwner {
         uint256 oldStalePeriod = stalePeriodOverrides[currencyKey];
         stalePeriodOverrides[currencyKey] = newStalePeriod;
-        emit StalePeriodOverrideUpdated(
-            currencyKey, oldStalePeriod, newStalePeriod
-            );
+        emit StalePeriodOverrideUpdated(currencyKey, oldStalePeriod, newStalePeriod);
     }
 
-    function addChainlinkOracle(
-        bytes32 currencyKey,
-        address oracleAddress,
-        bool removeExisting
-    )
-        external
-        onlyOwner
-    {
+    function addChainlinkOracle(bytes32 currencyKey, address oracleAddress, bool removeExisting) external onlyOwner {
         _addChainlinkOracle(currencyKey, oracleAddress, removeExisting);
     }
 
@@ -147,15 +114,10 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         external
         onlyOwner
     {
-        require(
-            currencyKeys.length == oracleAddresses.length,
-            "OracleRouter: array length mismatch"
-        );
+        require(currencyKeys.length == oracleAddresses.length, "OracleRouter: array length mismatch");
 
         for (uint256 ind = 0; ind < currencyKeys.length; ind++) {
-            _addChainlinkOracle(
-                currencyKeys[ind], oracleAddresses[ind], removeExisting
-            );
+            _addChainlinkOracle(currencyKeys[ind], oracleAddresses[ind], removeExisting);
         }
     }
 
@@ -168,9 +130,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         external
         onlyOwner
     {
-        _addBandOracle(
-            currencyKey, bandCurrencyKey, oracleAddress, removeExisting
-        );
+        _addBandOracle(currencyKey, bandCurrencyKey, oracleAddress, removeExisting);
     }
 
     function addBandOracles(
@@ -183,29 +143,16 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         onlyOwner
     {
         require(
-            currencyKeys.length == bandCurrencyKeys.length
-                && bandCurrencyKeys.length == oracleAddresses.length,
+            currencyKeys.length == bandCurrencyKeys.length && bandCurrencyKeys.length == oracleAddresses.length,
             "OracleRouter: array length mismatch"
         );
 
         for (uint256 ind = 0; ind < currencyKeys.length; ind++) {
-            _addBandOracle(
-                currencyKeys[ind],
-                bandCurrencyKeys[ind],
-                oracleAddresses[ind],
-                removeExisting
-            );
+            _addBandOracle(currencyKeys[ind], bandCurrencyKeys[ind], oracleAddresses[ind], removeExisting);
         }
     }
 
-    function addUniswapTwapOracle(
-        bytes32 currencyKey,
-        address oracleAddress,
-        bool removeExisting
-    )
-        external
-        onlyOwner
-    {
+    function addUniswapTwapOracle(bytes32 currencyKey, address oracleAddress, bool removeExisting) external onlyOwner {
         _addUniswapTwapOracle(currencyKey, oracleAddress, removeExisting);
     }
 
@@ -217,23 +164,14 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         external
         onlyOwner
     {
-        require(
-            currencyKeys.length == oracleAddresses.length,
-            "OracleRouter: array length mismatch"
-        );
+        require(currencyKeys.length == oracleAddresses.length, "OracleRouter: array length mismatch");
 
         for (uint256 ind = 0; ind < currencyKeys.length; ind++) {
-            _addUniswapTwapOracle(
-                currencyKeys[ind], oracleAddresses[ind], removeExisting
-            );
+            _addUniswapTwapOracle(currencyKeys[ind], oracleAddresses[ind], removeExisting);
         }
     }
 
-    function addTerminalPriceOracle(
-        bytes32 currencyKey,
-        uint160 terminalPrice,
-        bool removeExisting
-    )
+    function addTerminalPriceOracle(bytes32 currencyKey, uint160 terminalPrice, bool removeExisting)
         external
         onlyOwner
     {
@@ -248,15 +186,10 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         external
         onlyOwner
     {
-        require(
-            currencyKeys.length == terminalPrices.length,
-            "OracleRouter: array length mismatch"
-        );
+        require(currencyKeys.length == terminalPrices.length, "OracleRouter: array length mismatch");
 
         for (uint256 ind = 0; ind < currencyKeys.length; ind++) {
-            _addTerminalPriceOracle(
-                currencyKeys[ind], terminalPrices[ind], removeExisting
-            );
+            _addTerminalPriceOracle(currencyKeys[ind], terminalPrices[ind], removeExisting);
         }
     }
 
@@ -264,27 +197,16 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         _removeOracle(currencyKey);
     }
 
-    function _addChainlinkOracle(
-        bytes32 currencyKey,
-        address oracleAddress,
-        bool removeExisting
-    )
-        private
-    {
+    function _addChainlinkOracle(bytes32 currencyKey, address oracleAddress, bool removeExisting) private {
         require(currencyKey != bytes32(0), "OracleRouter: empty currency key");
-        require(
-            oracleAddress != address(0), "OracleRouter: empty oracle address"
-        );
+        require(oracleAddress != address(0), "OracleRouter: empty oracle address");
 
         if (oracleSettings[currencyKey].oracleAddress != address(0)) {
             require(removeExisting, "OracleRouter: oracle already exists");
             _removeOracle(currencyKey);
         }
 
-        oracleSettings[currencyKey] = OracleSettings({
-            oracleType: ORACLE_TYPE_CHAINLINK,
-            oracleAddress: oracleAddress
-        });
+        oracleSettings[currencyKey] = OracleSettings({oracleType: ORACLE_TYPE_CHAINLINK, oracleAddress: oracleAddress});
 
         emit ChainlinkOracleAdded(currencyKey, oracleAddress);
     }
@@ -298,60 +220,36 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         private
     {
         require(currencyKey != bytes32(0), "OracleRouter: empty currency key");
-        require(
-            bytes(bandCurrencyKey).length != 0,
-            "OracleRouter: empty band currency key"
-        );
-        require(
-            oracleAddress != address(0), "OracleRouter: empty oracle address"
-        );
+        require(bytes(bandCurrencyKey).length != 0, "OracleRouter: empty band currency key");
+        require(oracleAddress != address(0), "OracleRouter: empty oracle address");
 
         if (oracleSettings[currencyKey].oracleAddress != address(0)) {
             require(removeExisting, "OracleRouter: oracle already exists");
             _removeOracle(currencyKey);
         }
 
-        oracleSettings[currencyKey] = OracleSettings({
-            oracleType: ORACLE_TYPE_BAND,
-            oracleAddress: oracleAddress
-        });
+        oracleSettings[currencyKey] = OracleSettings({oracleType: ORACLE_TYPE_BAND, oracleAddress: oracleAddress});
         linearCurrencyKeysToBandCurrencyKeys[currencyKey] = bandCurrencyKey;
 
         emit BandOracleAdded(currencyKey, bandCurrencyKey, oracleAddress);
     }
 
-    function _addUniswapTwapOracle(
-        bytes32 currencyKey,
-        address oracleAddress,
-        bool removeExisting
-    )
-        private
-    {
+    function _addUniswapTwapOracle(bytes32 currencyKey, address oracleAddress, bool removeExisting) private {
         require(currencyKey != bytes32(0), "OracleRouter: empty currency key");
-        require(
-            oracleAddress != address(0), "OracleRouter: empty oracle address"
-        );
+        require(oracleAddress != address(0), "OracleRouter: empty oracle address");
 
         if (oracleSettings[currencyKey].oracleAddress != address(0)) {
             require(removeExisting, "OracleRouter: oracle already exists");
             _removeOracle(currencyKey);
         }
 
-        oracleSettings[currencyKey] = OracleSettings({
-            oracleType: ORACLE_TYPE_UNISWAP_TWAP,
-            oracleAddress: oracleAddress
-        });
+        oracleSettings[currencyKey] =
+            OracleSettings({oracleType: ORACLE_TYPE_UNISWAP_TWAP, oracleAddress: oracleAddress});
 
         emit UniswapTwapOracleAdded(currencyKey, oracleAddress);
     }
 
-    function _addTerminalPriceOracle(
-        bytes32 currencyKey,
-        uint160 terminalPrice,
-        bool removeExisting
-    )
-        private
-    {
+    function _addTerminalPriceOracle(bytes32 currencyKey, uint160 terminalPrice, bool removeExisting) private {
         require(currencyKey != bytes32(0), "OracleRouter: empty currency key");
         require(terminalPrice != 0, "OracleRouter: empty oracle address");
 
@@ -361,19 +259,15 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         }
 
         // Exploits the `oracleAddress` field to store a 160-bit integer
-        oracleSettings[currencyKey] = OracleSettings({
-            oracleType: ORACLE_TYPE_TERMINAL_PRICE,
-            oracleAddress: address(terminalPrice)
-        });
+        oracleSettings[currencyKey] =
+            OracleSettings({oracleType: ORACLE_TYPE_TERMINAL_PRICE, oracleAddress: address(terminalPrice)});
 
         emit TerminalPriceOracleAdded(currencyKey, terminalPrice);
     }
 
     function _removeOracle(bytes32 currencyKey) private {
         OracleSettings memory settings = oracleSettings[currencyKey];
-        require(
-            settings.oracleAddress != address(0), "OracleRouter: oracle not found"
-        );
+        require(settings.oracleAddress != address(0), "OracleRouter: oracle not found");
 
         delete oracleSettings[currencyKey];
 
@@ -384,46 +278,32 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         emit OracleRemoved(currencyKey, settings.oracleAddress);
     }
 
-    function _getPriceData(bytes32 currencyKey)
-        private
-        view
-        returns (uint256 price, uint256 updateTime)
-    {
+    function _getPriceData(bytes32 currencyKey) private view returns (uint256 price, uint256 updateTime) {
         if (currencyKey == LUSD) {
             return (SafeDecimalMath.unit(), block.timestamp);
         }
 
         OracleSettings memory settings = oracleSettings[currencyKey];
-        require(
-            settings.oracleAddress != address(0), "OracleRouter: oracle not set"
-        );
+        require(settings.oracleAddress != address(0), "OracleRouter: oracle not set");
 
         if (settings.oracleType == ORACLE_TYPE_CHAINLINK) {
-            (, int256 rawAnswer,, uint256 rawUpdateTime,) =
-                IChainlinkOracle(settings.oracleAddress).latestRoundData();
+            (, int256 rawAnswer,, uint256 rawUpdateTime,) = IChainlinkOracle(settings.oracleAddress).latestRoundData();
 
-            uint8 oraclePriceDecimals =
-                IChainlinkOracle(settings.oracleAddress).decimals();
+            uint8 oraclePriceDecimals = IChainlinkOracle(settings.oracleAddress).decimals();
             if (oraclePriceDecimals == OUTPUT_PRICE_DECIMALS) {
                 price = rawAnswer.toUint256();
             } else if (oraclePriceDecimals > OUTPUT_PRICE_DECIMALS) {
                 // Too many decimals
-                price = rawAnswer.toUint256().div(
-                    10 ** uint256(oraclePriceDecimals - OUTPUT_PRICE_DECIMALS)
-                );
+                price = rawAnswer.toUint256().div(10 ** uint256(oraclePriceDecimals - OUTPUT_PRICE_DECIMALS));
             } else {
                 // Too few decimals
-                price = rawAnswer.toUint256().mul(
-                    10 ** uint256(OUTPUT_PRICE_DECIMALS - oraclePriceDecimals)
-                );
+                price = rawAnswer.toUint256().mul(10 ** uint256(OUTPUT_PRICE_DECIMALS - oraclePriceDecimals));
             }
 
             updateTime = rawUpdateTime;
         } else if (settings.oracleType == ORACLE_TYPE_BAND) {
-            IBandProtocolOracle.ReferenceData memory priceRes =
-            IBandProtocolOracle(settings.oracleAddress).getReferenceData(
-                linearCurrencyKeysToBandCurrencyKeys[currencyKey], "USD"
-            );
+            IBandProtocolOracle.ReferenceData memory priceRes = IBandProtocolOracle(settings.oracleAddress)
+                .getReferenceData(linearCurrencyKeysToBandCurrencyKeys[currencyKey], "USD");
 
             price = priceRes.rate;
             updateTime = priceRes.lastUpdatedBase;
@@ -442,11 +322,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         }
     }
 
-    function _isUpdateTimeStaled(uint256 updateTime, uint256 stalePeriod)
-        private
-        view
-        returns (bool)
-    {
+    function _isUpdateTimeStaled(uint256 updateTime, uint256 stalePeriod) private view returns (bool) {
         return updateTime.add(stalePeriod) < block.timestamp;
     }
 }

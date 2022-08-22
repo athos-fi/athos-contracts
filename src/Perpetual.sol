@@ -31,12 +31,8 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         uint256 additionalCollateral,
         uint256 fees
     );
-    event CollateralAdded(
-        address indexed user, uint256 indexed positionId, uint256 amount
-    );
-    event CollateralRemoved(
-        address indexed user, uint256 indexed positionId, uint256 amount
-    );
+    event CollateralAdded(address indexed user, uint256 indexed positionId, uint256 amount);
+    event CollateralRemoved(address indexed user, uint256 indexed positionId, uint256 amount);
     event PoistionLiquidated(
         address indexed user,
         uint256 indexed positionId,
@@ -48,11 +44,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         uint256 insuranceFundContribution
     );
     event PositionPartiallyClosed(
-        address indexed user,
-        uint256 indexed positionId,
-        uint256 size,
-        uint256 price,
-        uint256 fees
+        address indexed user, uint256 indexed positionId, uint256 size, uint256 price, uint256 fees
     );
     event PositionClosed(
         address indexed user,
@@ -62,19 +54,13 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         uint256 fees,
         uint256 collateralReturned
     );
-    event PositionSync(
-        uint256 indexed positionId,
-        bool isLong,
-        uint256 debt,
-        uint256 locked,
-        uint256 collateral
-    );
+    event PositionSync(uint256 indexed positionId, bool isLong, uint256 debt, uint256 locked, uint256 collateral);
 
     /**
-     @param isLong Whether it's a long or short position.
-     @param debt The amount of debt to be repaid to close the position. The amount is in lUSD for long positions, and in XYZ for short positions.
-     @param locked The amount of locked proceeds. The amout is in XYZ for long positions, and is ignored for short positions.
-     @param collateral The amount of lUSD collateral, which includes sell proceeds for short positions.
+     * @param isLong Whether it's a long or short position.
+     * @param debt The amount of debt to be repaid to close the position. The amount is in lUSD for long positions, and in XYZ for short positions.
+     * @param locked The amount of locked proceeds. The amout is in XYZ for long positions, and is ignored for short positions.
+     * @param collateral The amount of lUSD collateral, which includes sell proceeds for short positions.
      */
     struct Position {
         bool isLong;
@@ -107,11 +93,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         _;
     }
 
-    function getCollateralizationRatio(uint256 positionId)
-        external
-        view
-        returns (uint256)
-    {
+    function getCollateralizationRatio(uint256 positionId) external view returns (uint256) {
         return _calculateCollateralizationRatio(positionId);
     }
 
@@ -133,19 +115,12 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         __Ownable_init();
 
         require(address(_exchange) != address(0), "Perpetual: zero address");
-        require(
-            address(_positionToken) != address(0), "Perpetual: zero address"
-        );
+        require(address(_positionToken) != address(0), "Perpetual: zero address");
         require(address(_lusdToken) != address(0), "Perpetual: zero address");
-        require(
-            address(_underlyingToken) != address(0), "Perpetual: zero address"
-        );
+        require(address(_underlyingToken) != address(0), "Perpetual: zero address");
         require(address(_lnPrices) != address(0), "Perpetual: zero address");
         require(_maintenanceMargin > 0, "Perpetual: zero amount");
-        require(
-            _minInitMargin > _maintenanceMargin,
-            "Perpetual: invalid minInitMargin"
-        );
+        require(_minInitMargin > _maintenanceMargin, "Perpetual: invalid minInitMargin");
 
         exchange = _exchange;
         positionToken = _positionToken;
@@ -166,10 +141,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         minInitMargin = newMinInitMargin;
     }
 
-    function setMaintenanceMargin(uint256 newMaintenanceMargin)
-        external
-        onlyOwner
-    {
+    function setMaintenanceMargin(uint256 newMaintenanceMargin) external onlyOwner {
         require(newMaintenanceMargin > 0, "Perpetual: zero amount");
         maintenanceMargin = newMaintenanceMargin;
     }
@@ -178,27 +150,16 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         feeRate = newFeeRate;
     }
 
-    function openPosition(
-        address user,
-        bool isLong,
-        uint256 size,
-        uint256 collateral
-    )
+    function openPosition(address user, bool isLong, uint256 size, uint256 collateral)
         external
         override
         onlyExchange
         returns (uint256 positionId, uint256 underlyingPrice)
     {
-        (positionId, underlyingPrice) =
-            _openPosition(user, isLong, size, collateral);
+        (positionId, underlyingPrice) = _openPosition(user, isLong, size, collateral);
     }
 
-    function increasePosition(
-        address user,
-        uint256 positionId,
-        uint256 size,
-        uint256 collateral
-    )
+    function increasePosition(address user, uint256 positionId, uint256 size, uint256 collateral)
         external
         override
         onlyExchange
@@ -211,20 +172,13 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         _addCollateral(msg.sender, positionId, amount);
     }
 
-    function removeCollateral(uint256 positionId, uint256 amount, address to)
-        external
-    {
+    function removeCollateral(uint256 positionId, uint256 amount, address to) external {
         require(amount > 0, "Perpetual: zero amount");
 
         _removeCollateral(msg.sender, positionId, amount, to);
     }
 
-    function closePositionByAmount(
-        address user,
-        uint256 positionId,
-        uint256 amount,
-        address to
-    )
+    function closePositionByAmount(address user, uint256 positionId, uint256 amount, address to)
         external
         override
         onlyExchange
@@ -244,24 +198,13 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         underlyingPrice = _closePositionByAmount(user, positionId, 0, to);
     }
 
-    function liquidatePosition(
-        uint256 positionId,
-        uint256 amount,
-        address rewardTo
-    )
-        external
-    {
+    function liquidatePosition(uint256 positionId, uint256 amount, address rewardTo) external {
         require(amount > 0, "Perpetual: zero amount");
 
         _liquidatePosition(msg.sender, positionId, amount, rewardTo);
     }
 
-    function _openPosition(
-        address user,
-        bool isLong,
-        uint256 size,
-        uint256 collateral
-    )
+    function _openPosition(address user, bool isLong, uint256 size, uint256 collateral)
         private
         returns (uint256 positionId, uint256 underlyingPrice)
     {
@@ -278,78 +221,43 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         uint256 fees = _addPositionSize(positionId, size, collateral);
         underlyingPrice = lnPrices.getPrice(underlyingTokenSymbol);
 
-        emit PositionCreated(
-            user,
-            positionId,
-            isLong,
-            size,
-            lnPrices.getPrice(underlyingTokenSymbol),
-            collateral,
-            fees
-            );
+        emit PositionCreated(user, positionId, isLong, size, lnPrices.getPrice(underlyingTokenSymbol), collateral, fees);
 
         _emitPositionSync(positionId);
     }
 
-    function _increasePosition(
-        address user,
-        uint256 positionId,
-        uint256 size,
-        uint256 collateral
-    )
+    function _increasePosition(address user, uint256 positionId, uint256 size, uint256 collateral)
         private
         returns (uint256 underlyingPrice)
     {
         require(size > 0, "Perpetual: zero amount");
 
-        require(
-            user == IERC721Upgradeable(address(positionToken)).ownerOf(positionId),
-            "Perpetual: owner mismatch"
-        );
+        require(user == IERC721Upgradeable(address(positionToken)).ownerOf(positionId), "Perpetual: owner mismatch");
         require(positions[positionId].debt > 0, "Perpetual: position not found");
 
         uint256 fees = _addPositionSize(positionId, size, collateral);
         underlyingPrice = lnPrices.getPrice(underlyingTokenSymbol);
 
-        emit PositionIncreased(
-            user,
-            positionId,
-            size,
-            lnPrices.getPrice(underlyingTokenSymbol),
-            collateral,
-            fees
-            );
+        emit PositionIncreased(user, positionId, size, lnPrices.getPrice(underlyingTokenSymbol), collateral, fees);
 
         _emitPositionSync(positionId);
     }
 
-    function _addPositionSize(
-        uint256 positionId,
-        uint256 size,
-        uint256 collateral
-    )
-        private
-        returns (uint256 fees)
-    {
+    function _addPositionSize(uint256 positionId, uint256 size, uint256 collateral) private returns (uint256 fees) {
         Position storage position = positions[positionId];
 
         if (collateral > 0) {
-            IERC20Upgradeable(address(lusdToken)).transferFrom(
-                address(exchange), address(this), collateral
-            );
+            IERC20Upgradeable(address(lusdToken)).transferFrom(address(exchange), address(this), collateral);
             position.collateral = position.collateral.add(collateral);
         }
 
-        uint256 underlyingValue =
-            lnPrices.exchange(underlyingTokenSymbol, size, LUSD);
+        uint256 underlyingValue = lnPrices.exchange(underlyingTokenSymbol, size, LUSD);
 
         fees = underlyingValue.mul(feeRate).div(UNIT);
         if (fees > 0) {
             position.collateral = position.collateral.sub(fees);
 
-            IERC20Upgradeable(address(lusdToken)).approve(
-                address(exchange), fees
-            );
+            IERC20Upgradeable(address(lusdToken)).approve(address(exchange), fees);
             exchange.submitFees(positionId, fees);
         }
 
@@ -359,57 +267,37 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
             position.locked = position.locked.add(size);
 
             totalUsdDebt = totalUsdDebt.add(underlyingValue);
-            exchange.requestAssetMint(
-                address(underlyingToken), address(this), size
-            );
+            exchange.requestAssetMint(address(underlyingToken), address(this), size);
         } else {
             // Short: borrow underlying to sell into lUSD
             position.debt = position.debt.add(size);
             position.collateral = position.collateral.add(underlyingValue);
 
             totalUnderlyingDebt = totalUnderlyingDebt.add(size);
-            exchange.requestAssetMint(
-                address(lusdToken), address(this), underlyingValue
-            );
+            exchange.requestAssetMint(address(lusdToken), address(this), underlyingValue);
         }
 
         _assertCollateralizationRatio(positionId);
     }
 
-    function _addCollateral(address user, uint256 positionId, uint256 amount)
-        private
-    {
+    function _addCollateral(address user, uint256 positionId, uint256 amount) private {
         require(positions[positionId].debt > 0, "Perpetual: position not found");
 
-        positions[positionId].collateral =
-            positions[positionId].collateral.add(amount);
+        positions[positionId].collateral = positions[positionId].collateral.add(amount);
 
-        IERC20Upgradeable(address(lusdToken)).transferFrom(
-            user, address(this), amount
-        );
+        IERC20Upgradeable(address(lusdToken)).transferFrom(user, address(this), amount);
 
         emit CollateralAdded(user, positionId, amount);
 
         _emitPositionSync(positionId);
     }
 
-    function _removeCollateral(
-        address user,
-        uint256 positionId,
-        uint256 amount,
-        address to
-    )
-        private
-    {
-        require(
-            user == IERC721Upgradeable(address(positionToken)).ownerOf(positionId),
-            "Perpetual: owner mismatch"
-        );
+    function _removeCollateral(address user, uint256 positionId, uint256 amount, address to) private {
+        require(user == IERC721Upgradeable(address(positionToken)).ownerOf(positionId), "Perpetual: owner mismatch");
 
         require(positions[positionId].debt > 0, "Perpetual: position not found");
 
-        positions[positionId].collateral =
-            positions[positionId].collateral.sub(amount);
+        positions[positionId].collateral = positions[positionId].collateral.sub(amount);
 
         _assertCollateralizationRatio(positionId);
 
@@ -420,58 +308,36 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         _emitPositionSync(positionId);
     }
 
-    function _closePositionByAmount(
-        address user,
-        uint256 positionId,
-        uint256 amount,
-        address to
-    )
+    function _closePositionByAmount(address user, uint256 positionId, uint256 amount, address to)
         private
         returns (uint256 underlyingPrice)
     {
-        require(
-            user == IERC721Upgradeable(address(positionToken)).ownerOf(positionId),
-            "Perpetual: owner mismatch"
-        );
+        require(user == IERC721Upgradeable(address(positionToken)).ownerOf(positionId), "Perpetual: owner mismatch");
 
         if (positions[positionId].isLong) {
-            (, underlyingPrice,) =
-                _closeLongPosition(user, positionId, amount, to, false);
+            (, underlyingPrice,) = _closeLongPosition(user, positionId, amount, to, false);
         } else {
-            (, underlyingPrice,) =
-                _closeShortPosition(user, positionId, amount, to, false);
+            (, underlyingPrice,) = _closeShortPosition(user, positionId, amount, to, false);
         }
     }
 
     // TODO: change to automatically calculate amount on-chain in a future iteration
-    function _liquidatePosition(
-        address liquidator,
-        uint256 positionId,
-        uint256 amount,
-        address rewardTo
-    )
-        private
-    {
+    function _liquidatePosition(address liquidator, uint256 positionId, uint256 amount, address rewardTo) private {
         require(
             _calculateCollateralizationRatio(positionId) < maintenanceMargin,
             "Perpetual: not lower than maintenance margin"
         );
 
-        address positionOwner =
-            IERC721Upgradeable(address(positionToken)).ownerOf(positionId);
+        address positionOwner = IERC721Upgradeable(address(positionToken)).ownerOf(positionId);
 
         (uint256 fees, uint256 underlyingPrice, uint256 liquidatorReward) =
             positions[positionId].isLong
             ? _closeLongPosition(positionOwner, positionId, amount, positionOwner, true)
-            : _closeShortPosition(
-                positionOwner, positionId, amount, positionOwner, true
-            );
+            : _closeShortPosition(positionOwner, positionId, amount, positionOwner, true);
 
-        uint256 collateralizationRatioAfter =
-            _calculateCollateralizationRatio(positionId);
+        uint256 collateralizationRatioAfter = _calculateCollateralizationRatio(positionId);
         require(
-            collateralizationRatioAfter >= maintenanceMargin
-                && collateralizationRatioAfter <= minInitMargin,
+            collateralizationRatioAfter >= maintenanceMargin && collateralizationRatioAfter <= minInitMargin,
             "Perpetual: invalid liquidation amount"
         );
 
@@ -484,42 +350,21 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
 
         if (liquidatorReward > 0) {
             // This amount has already been deducted from position collateral
-            IERC20Upgradeable(address(lusdToken)).transfer(
-                rewardTo, liquidatorReward
-            );
+            IERC20Upgradeable(address(lusdToken)).transfer(rewardTo, liquidatorReward);
         }
         if (insuranceContribution > 0) {
-            IERC20Upgradeable(address(lusdToken)).approve(
-                address(exchange), insuranceContribution
-            );
+            IERC20Upgradeable(address(lusdToken)).approve(address(exchange), insuranceContribution);
             exchange.submitInsuranceFund(positionId, insuranceContribution);
         }
 
         emit PoistionLiquidated(
-            positionOwner,
-            positionId,
-            amount,
-            underlyingPrice,
-            liquidator,
-            fees,
-            liquidatorReward,
-            insuranceContribution
+            positionOwner, positionId, amount, underlyingPrice, liquidator, fees, liquidatorReward, insuranceContribution
             );
     }
 
-    function _closeLongPosition(
-        address user,
-        uint256 positionId,
-        uint256 amount,
-        address to,
-        bool isLiquidation
-    )
+    function _closeLongPosition(address user, uint256 positionId, uint256 amount, address to, bool isLiquidation)
         private
-        returns (
-            uint256 fees,
-            uint256 underlyingPrice,
-            uint256 liquidationReward
-        )
+        returns (uint256 fees, uint256 underlyingPrice, uint256 liquidationReward)
     {
         Position memory position = positions[positionId];
         require(position.debt > 0, "Perpetual: position not found");
@@ -531,10 +376,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         }
 
         // Repay debt proportionally
-        uint256 debtToRepay =
-            amount == position.locked
-            ? position.debt
-            : position.debt.mul(amount).div(position.locked);
+        uint256 debtToRepay = amount == position.locked ? position.debt : position.debt.mul(amount).div(position.locked);
 
         // Adjust total USD debt stat
         totalUsdDebt = totalUsdDebt.sub(debtToRepay);
@@ -544,11 +386,8 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         position.locked = position.locked.sub(amount);
 
         // Sell underlying into lUSD for debt repayment
-        uint256 sellProceeds =
-            lnPrices.exchange(underlyingTokenSymbol, amount, LUSD);
-        exchange.requestAssetBurn(
-            address(underlyingToken), address(this), amount
-        );
+        uint256 sellProceeds = lnPrices.exchange(underlyingTokenSymbol, amount, LUSD);
+        exchange.requestAssetBurn(address(underlyingToken), address(this), amount);
 
         // Calculate fees & liquidation reward (extra debt to repay)
         uint256 feesAndLiquidationReward = 0;
@@ -558,31 +397,23 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
             if (fees > 0) {
                 feesAndLiquidationReward = feesAndLiquidationReward.add(fees);
 
-                IERC20Upgradeable(address(lusdToken)).approve(
-                    address(exchange), fees
-                );
+                IERC20Upgradeable(address(lusdToken)).approve(address(exchange), fees);
                 exchange.submitFees(positionId, fees);
             }
 
             if (isLiquidation) {
-                liquidationReward =
-                    sellProceeds.mul(liquidatorRewardRatio).div(UNIT);
-                feesAndLiquidationReward =
-                    feesAndLiquidationReward.add(liquidationReward);
+                liquidationReward = sellProceeds.mul(liquidatorRewardRatio).div(UNIT);
+                feesAndLiquidationReward = feesAndLiquidationReward.add(liquidationReward);
             }
         }
 
         // Mint/burn the net difference
         if (sellProceeds > debtToRepay) {
             // Mint the difference to this contract
-            exchange.requestAssetMint(
-                address(lusdToken), address(this), sellProceeds.sub(debtToRepay)
-            );
+            exchange.requestAssetMint(address(lusdToken), address(this), sellProceeds.sub(debtToRepay));
         } else if (sellProceeds < debtToRepay) {
             // Burn the difference
-            exchange.requestAssetBurn(
-                address(lusdToken), address(this), debtToRepay.sub(sellProceeds)
-            );
+            exchange.requestAssetBurn(address(lusdToken), address(this), debtToRepay.sub(sellProceeds));
         }
 
         // Trick: pretend more debt is to be repaid to account for fees and liquidation reward
@@ -590,8 +421,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
 
         if (sellProceeds >= debtToRepay) {
             // Sell proceeds alone are enough to cover debt repayment. The leftover goes into collateral
-            position.collateral =
-                position.collateral.add(sellProceeds.sub(debtToRepay));
+            position.collateral = position.collateral.add(sellProceeds.sub(debtToRepay));
         } else {
             // Still some debt left after repayment with sell proceeds
             debtToRepay = debtToRepay.sub(sellProceeds);
@@ -609,20 +439,11 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
 
         if (position.debt == 0 && position.locked == 0) {
             if (position.collateral > 0) {
-                IERC20Upgradeable(address(lusdToken)).transfer(
-                    to, position.collateral
-                );
+                IERC20Upgradeable(address(lusdToken)).transfer(to, position.collateral);
             }
 
             if (!isLiquidation) {
-                emit PositionClosed(
-                    user,
-                    positionId,
-                    amount,
-                    underlyingPrice,
-                    fees,
-                    position.collateral
-                    );
+                emit PositionClosed(user, positionId, amount, underlyingPrice, fees, position.collateral);
             }
 
             emit PositionSync(positionId, true, 0, 0, 0);
@@ -637,28 +458,16 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
             positions[positionId].collateral = position.collateral;
 
             if (!isLiquidation) {
-                emit PositionPartiallyClosed(
-                    user, positionId, amount, underlyingPrice, fees
-                    );
+                emit PositionPartiallyClosed(user, positionId, amount, underlyingPrice, fees);
             }
 
             _emitPositionSync(positionId);
         }
     }
 
-    function _closeShortPosition(
-        address user,
-        uint256 positionId,
-        uint256 amount,
-        address to,
-        bool isLiquidation
-    )
+    function _closeShortPosition(address user, uint256 positionId, uint256 amount, address to, bool isLiquidation)
         private
-        returns (
-            uint256 fees,
-            uint256 underlyingPrice,
-            uint256 liquidationReward
-        )
+        returns (uint256 fees, uint256 underlyingPrice, uint256 liquidationReward)
     {
         Position memory position = positions[positionId];
         require(position.debt > 0, "Perpetual: position not found");
@@ -670,8 +479,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         totalUnderlyingDebt = totalUnderlyingDebt.sub(debtToRepay);
 
         // Buy underlying with lUSD
-        uint256 lusdNeededToRepay =
-            lnPrices.exchange(underlyingTokenSymbol, debtToRepay, LUSD);
+        uint256 lusdNeededToRepay = lnPrices.exchange(underlyingTokenSymbol, debtToRepay, LUSD);
 
         // Calculate fees & liquidation reward (extra debt to repay)
         uint256 feesAndLiquidationReward = 0;
@@ -680,31 +488,22 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
             if (fees > 0) {
                 feesAndLiquidationReward = feesAndLiquidationReward.add(fees);
 
-                IERC20Upgradeable(address(lusdToken)).approve(
-                    address(exchange), fees
-                );
+                IERC20Upgradeable(address(lusdToken)).approve(address(exchange), fees);
                 exchange.submitFees(positionId, fees);
             }
 
             if (isLiquidation) {
-                liquidationReward =
-                    lusdNeededToRepay.mul(liquidatorRewardRatio).div(UNIT);
-                feesAndLiquidationReward =
-                    feesAndLiquidationReward.add(liquidationReward);
+                liquidationReward = lusdNeededToRepay.mul(liquidatorRewardRatio).div(UNIT);
+                feesAndLiquidationReward = feesAndLiquidationReward.add(liquidationReward);
             }
         }
 
-        exchange.requestAssetBurn(
-            address(lusdToken), address(this), lusdNeededToRepay
-        );
+        exchange.requestAssetBurn(address(lusdToken), address(this), lusdNeededToRepay);
 
         // Trick: pretend more lUSD is needed to repay the debt
         lusdNeededToRepay = lusdNeededToRepay.add(feesAndLiquidationReward);
 
-        require(
-            position.collateral >= lusdNeededToRepay,
-            "Perpetual: bankrupted position"
-        );
+        require(position.collateral >= lusdNeededToRepay, "Perpetual: bankrupted position");
 
         // Adjust position data in-memory (no SafeMath needed actually)
         position.debt = position.debt.sub(debtToRepay);
@@ -714,20 +513,11 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
 
         if (position.debt == 0) {
             if (position.collateral > 0) {
-                IERC20Upgradeable(address(lusdToken)).transfer(
-                    to, position.collateral
-                );
+                IERC20Upgradeable(address(lusdToken)).transfer(to, position.collateral);
             }
 
             if (!isLiquidation) {
-                emit PositionClosed(
-                    user,
-                    positionId,
-                    amount,
-                    underlyingPrice,
-                    fees,
-                    position.collateral
-                    );
+                emit PositionClosed(user, positionId, amount, underlyingPrice, fees, position.collateral);
             }
 
             emit PositionSync(positionId, false, 0, 0, 0);
@@ -741,9 +531,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
             positions[positionId].collateral = position.collateral;
 
             if (!isLiquidation) {
-                emit PositionPartiallyClosed(
-                    user, positionId, amount, underlyingPrice, fees
-                    );
+                emit PositionPartiallyClosed(user, positionId, amount, underlyingPrice, fees);
             }
 
             _emitPositionSync(positionId);
@@ -752,31 +540,23 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
 
     // This function should only be called after position is updated since it reads from storage
     function _assertCollateralizationRatio(uint256 positionId) private view {
-        require(
-            _calculateCollateralizationRatio(positionId) >= minInitMargin,
-            "Perpetual: min init margin not reached"
-        );
+        require(_calculateCollateralizationRatio(positionId) >= minInitMargin, "Perpetual: min init margin not reached");
     }
 
     // This function should only be called after position is updated since it reads from storage
-    function _calculateCollateralizationRatio(uint256 positionId)
-        private
-        view
-        returns (uint256)
-    {
+    function _calculateCollateralizationRatio(uint256 positionId) private view returns (uint256) {
         Position memory position = positions[positionId];
         require(position.debt > 0, "Perpetual: position not found");
 
         if (position.isLong) {
             // Long: collateralRatio = (collateral + locked * price) / debt - 1
-            return position.collateral.add(
-                lnPrices.exchange(underlyingTokenSymbol, position.locked, LUSD)
-            ).mul(UNIT).div(position.debt).sub(UNIT);
+            return position.collateral.add(lnPrices.exchange(underlyingTokenSymbol, position.locked, LUSD)).mul(UNIT)
+                .div(position.debt).sub(UNIT);
         } else {
             // Short: collateralRatio = collateral / (debt * price) - 1
-            return position.collateral.mul(UNIT).div(
-                lnPrices.exchange(underlyingTokenSymbol, position.debt, LUSD)
-            ).sub(UNIT);
+            return position.collateral.mul(UNIT).div(lnPrices.exchange(underlyingTokenSymbol, position.debt, LUSD)).sub(
+                UNIT
+            );
         }
     }
 
@@ -784,12 +564,6 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         Position memory position = positions[positionId];
         require(position.debt > 0, "Perpetual: position not found");
 
-        emit PositionSync(
-            positionId,
-            position.isLong,
-            position.debt,
-            position.locked,
-            position.collateral
-            );
+        emit PositionSync(positionId, position.isLong, position.debt, position.locked, position.collateral);
     }
 }

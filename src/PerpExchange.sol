@@ -17,36 +17,19 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
 
     event OpenPositionActionQueued(
-        uint256 actionId,
-        address user,
-        bytes32 underlying,
-        bool isLong,
-        uint256 size,
-        uint256 collateral
+        uint256 actionId, address user, bytes32 underlying, bool isLong, uint256 size, uint256 collateral
     );
     event IncreasePositionActionQueued(
-        uint256 actionId,
-        address user,
-        bytes32 underlying,
-        uint256 positionId,
-        uint256 size,
-        uint256 collateral
+        uint256 actionId, address user, bytes32 underlying, uint256 positionId, uint256 size, uint256 collateral
     );
     event ClosePositionActionQueued(
-        uint256 actionId,
-        address user,
-        bytes32 underlying,
-        uint256 positionId,
-        uint256 amount,
-        address to
+        uint256 actionId, address user, bytes32 underlying, uint256 positionId, uint256 amount, address to
     );
     event ActionSettled(uint256 actionId, uint256 underlyingPrice);
     event ActionReverted(uint256 actionId);
     event PoolFeeHolderChanged(address newPoolFeeHolder);
     event FoundationFeeHolderChanged(address newFoundationFeeHolder);
-    event FeesCharged(
-        uint256 positionId, uint256 feeForPool, uint256 feeForFoundation
-    );
+    event FeesCharged(uint256 positionId, uint256 feeForPool, uint256 feeForFoundation);
     event InsuranceFundContribution(uint256 positionId, uint256 amount);
 
     struct PendingActionMeta {
@@ -87,8 +70,7 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
     uint256 public lastPendingActionId;
     mapping(uint256 => PendingActionMeta) public pendingActionMetas;
     mapping(uint256 => OpenPositionActionData) public openPositionActions;
-    mapping(uint256 => IncreasePositionActionData) public
-        increasePositionActions;
+    mapping(uint256 => IncreasePositionActionData) public increasePositionActions;
     mapping(uint256 => ClosePositionActionData) public closePositionActions;
 
     uint8 public constant ACTION_TYPE_OPEN_POSITION = 1;
@@ -96,8 +78,7 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
     uint8 public constant ACTION_TYPE_CLOSE_POSITION = 3;
 
     uint256 private constant UNIT = 10 ** 18;
-    bytes32 private constant CONFIG_TRADE_SETTLEMENT_DELAY =
-        "TradeSettlementDelay";
+    bytes32 private constant CONFIG_TRADE_SETTLEMENT_DELAY = "TradeSettlementDelay";
     bytes32 private constant CONFIG_TRADE_REVERT_DELAY = "TradeRevertDelay";
     bytes32 private constant CONFIG_FEE_SPLIT = "FoundationFeeSplit";
 
@@ -113,13 +94,9 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
     {
         __Ownable_init();
 
-        require(
-            address(_lnAssetSystem) != address(0), "PerpExchange: zero address"
-        );
+        require(address(_lnAssetSystem) != address(0), "PerpExchange: zero address");
         require(address(_lnConfig) != address(0), "PerpExchange: zero address");
-        require(
-            address(_positionToken) != address(0), "PerpExchange: zero address"
-        );
+        require(address(_positionToken) != address(0), "PerpExchange: zero address");
         require(address(_lusdToken) != address(0), "PerpExchange: zero address");
 
         lnAssetSystem = _lnAssetSystem;
@@ -135,178 +112,99 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
         emit PoolFeeHolderChanged(newPoolFeeHolder);
     }
 
-    function setFoundationFeeHolder(address newFoundationFeeHolder)
-        external
-        onlyOwner
-    {
+    function setFoundationFeeHolder(address newFoundationFeeHolder) external onlyOwner {
         foundationFeeHolder = newFoundationFeeHolder;
 
         emit FoundationFeeHolderChanged(newFoundationFeeHolder);
     }
 
-    function openPosition(
-        bytes32 underlying,
-        bool isLong,
-        uint256 size,
-        uint256 collateral
-    )
-        external
-    {
+    function openPosition(bytes32 underlying, bool isLong, uint256 size, uint256 collateral) external {
         // TODO: perform basic argument validation
 
         // Lock up user's lUSD until settlement
-        IERC20Upgradeable(address(lusdToken)).transferFrom(
-            msg.sender, address(this), collateral
-        );
+        IERC20Upgradeable(address(lusdToken)).transferFrom(msg.sender, address(this), collateral);
 
-        uint256 actionId =
-            _queueActionMeta(msg.sender, ACTION_TYPE_OPEN_POSITION);
-        openPositionActions[actionId] = OpenPositionActionData({
-            underlying: underlying,
-            isLong: isLong,
-            size: size,
-            collateral: collateral
-        });
+        uint256 actionId = _queueActionMeta(msg.sender, ACTION_TYPE_OPEN_POSITION);
+        openPositionActions[actionId] =
+            OpenPositionActionData({underlying: underlying, isLong: isLong, size: size, collateral: collateral});
 
-        emit OpenPositionActionQueued(
-            actionId, msg.sender, underlying, isLong, size, collateral
-            );
+        emit OpenPositionActionQueued(actionId, msg.sender, underlying, isLong, size, collateral);
     }
 
-    function increasePosition(
-        bytes32 underlying,
-        uint256 positionId,
-        uint256 size,
-        uint256 collateral
-    )
-        external
-    {
+    function increasePosition(bytes32 underlying, uint256 positionId, uint256 size, uint256 collateral) external {
         // TODO: perform basic argument validation
         _assertPositionExists(underlying, positionId);
 
         // Lock up user's lUSD until settlement
-        IERC20Upgradeable(address(lusdToken)).transferFrom(
-            msg.sender, address(this), collateral
-        );
+        IERC20Upgradeable(address(lusdToken)).transferFrom(msg.sender, address(this), collateral);
 
-        uint256 actionId =
-            _queueActionMeta(msg.sender, ACTION_TYPE_INCREASE_POSITION);
-        increasePositionActions[actionId] = IncreasePositionActionData({
-            underlying: underlying,
-            positionId: positionId,
-            size: size,
-            collateral: collateral
-        });
+        uint256 actionId = _queueActionMeta(msg.sender, ACTION_TYPE_INCREASE_POSITION);
+        increasePositionActions[actionId] =
+            IncreasePositionActionData({underlying: underlying, positionId: positionId, size: size, collateral: collateral});
 
-        emit IncreasePositionActionQueued(
-            actionId, msg.sender, underlying, positionId, size, collateral
-            );
+        emit IncreasePositionActionQueued(actionId, msg.sender, underlying, positionId, size, collateral);
     }
 
-    function closePositionByAmount(
-        bytes32 underlying,
-        uint256 positionId,
-        uint256 amount,
-        address to
-    )
-        external
-    {
+    function closePositionByAmount(bytes32 underlying, uint256 positionId, uint256 amount, address to) external {
         // TODO: perform basic argument validation
         require(amount > 0, "PerpExchange: zero amount");
         _assertPositionExists(underlying, positionId);
 
-        uint256 actionId =
-            _queueActionMeta(msg.sender, ACTION_TYPE_CLOSE_POSITION);
-        closePositionActions[actionId] = ClosePositionActionData({
-            underlying: underlying,
-            positionId: positionId,
-            amount: amount,
-            to: to
-        });
+        uint256 actionId = _queueActionMeta(msg.sender, ACTION_TYPE_CLOSE_POSITION);
+        closePositionActions[actionId] =
+            ClosePositionActionData({underlying: underlying, positionId: positionId, amount: amount, to: to});
 
-        emit ClosePositionActionQueued(
-            actionId, msg.sender, underlying, positionId, amount, to
-            );
+        emit ClosePositionActionQueued(actionId, msg.sender, underlying, positionId, amount, to);
     }
 
-    function closePosition(bytes32 underlying, uint256 positionId, address to)
-        external
-    {
+    function closePosition(bytes32 underlying, uint256 positionId, address to) external {
         // TODO: perform basic argument validation
         _assertPositionExists(underlying, positionId);
 
-        uint256 actionId =
-            _queueActionMeta(msg.sender, ACTION_TYPE_CLOSE_POSITION);
-        closePositionActions[actionId] = ClosePositionActionData({
-            underlying: underlying,
-            positionId: positionId,
-            amount: 0,
-            to: to
-        });
+        uint256 actionId = _queueActionMeta(msg.sender, ACTION_TYPE_CLOSE_POSITION);
+        closePositionActions[actionId] =
+            ClosePositionActionData({underlying: underlying, positionId: positionId, amount: 0, to: to});
 
-        emit ClosePositionActionQueued(
-            actionId, msg.sender, underlying, positionId, 0, to
-            );
+        emit ClosePositionActionQueued(actionId, msg.sender, underlying, positionId, 0, to);
     }
 
     function settleAction(uint256 pendingActionId) external {
-        PendingActionMeta memory actionMeta =
-            pendingActionMetas[pendingActionId];
-        require(
-            actionMeta.actionType > 0, "PerpExchange: pending action not found"
-        );
+        PendingActionMeta memory actionMeta = pendingActionMetas[pendingActionId];
+        require(actionMeta.actionType > 0, "PerpExchange: pending action not found");
 
         // Assert settlement delay
-        uint256 settlementDelay =
-            lnConfig.getUint(CONFIG_TRADE_SETTLEMENT_DELAY);
+        uint256 settlementDelay = lnConfig.getUint(CONFIG_TRADE_SETTLEMENT_DELAY);
         uint256 revertDelay = lnConfig.getUint(CONFIG_TRADE_REVERT_DELAY);
         require(settlementDelay > 0, "PerpExchange: settlement delay not set");
         require(revertDelay > 0, "PerpExchange: revert delay not set");
-        require(
-            block.timestamp >= actionMeta.timestamp + settlementDelay,
-            "PerpExchange: settlement delay not passed"
-        );
-        require(
-            block.timestamp <= actionMeta.timestamp + revertDelay,
-            "PerpExchange: action can only be reverted now"
-        );
+        require(block.timestamp >= actionMeta.timestamp + settlementDelay, "PerpExchange: settlement delay not passed");
+        require(block.timestamp <= actionMeta.timestamp + revertDelay, "PerpExchange: action can only be reverted now");
 
         uint256 underlyingPrice;
 
         if (actionMeta.actionType == ACTION_TYPE_OPEN_POSITION) {
-            OpenPositionActionData memory data =
-                openPositionActions[pendingActionId];
+            OpenPositionActionData memory data = openPositionActions[pendingActionId];
 
             IPerpetual perpContract = _getPerpContract(data.underlying);
-            IERC20Upgradeable(address(lusdToken)).approve(
-                address(perpContract), data.collateral
-            );
-            (, underlyingPrice) = perpContract.openPosition(
-                actionMeta.user, data.isLong, data.size, data.collateral
-            );
+            IERC20Upgradeable(address(lusdToken)).approve(address(perpContract), data.collateral);
+            (, underlyingPrice) = perpContract.openPosition(actionMeta.user, data.isLong, data.size, data.collateral);
         } else if (actionMeta.actionType == ACTION_TYPE_INCREASE_POSITION) {
-            IncreasePositionActionData memory data =
-                increasePositionActions[pendingActionId];
+            IncreasePositionActionData memory data = increasePositionActions[pendingActionId];
 
             IPerpetual perpContract = _getPerpContract(data.underlying);
-            IERC20Upgradeable(address(lusdToken)).approve(
-                address(perpContract), data.collateral
-            );
-            underlyingPrice = perpContract.increasePosition(
-                actionMeta.user, data.positionId, data.size, data.collateral
-            );
+            IERC20Upgradeable(address(lusdToken)).approve(address(perpContract), data.collateral);
+            underlyingPrice =
+                perpContract.increasePosition(actionMeta.user, data.positionId, data.size, data.collateral);
         } else if (actionMeta.actionType == ACTION_TYPE_CLOSE_POSITION) {
-            ClosePositionActionData memory data =
-                closePositionActions[pendingActionId];
+            ClosePositionActionData memory data = closePositionActions[pendingActionId];
 
             if (data.amount > 0) {
-                underlyingPrice = _getPerpContract(data.underlying)
-                    .closePositionByAmount(
+                underlyingPrice = _getPerpContract(data.underlying).closePositionByAmount(
                     actionMeta.user, data.positionId, data.amount, data.to
                 );
             } else {
-                underlyingPrice = _getPerpContract(data.underlying)
-                    .closePosition(actionMeta.user, data.positionId, data.to);
+                underlyingPrice =
+                    _getPerpContract(data.underlying).closePosition(actionMeta.user, data.positionId, data.to);
             }
         } else {
             require(false, "PerpExchange: unknown action type");
@@ -319,19 +217,13 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
     }
 
     function revertAction(uint256 pendingActionId) external {
-        PendingActionMeta memory actionMeta =
-            pendingActionMetas[pendingActionId];
-        require(
-            actionMeta.actionType > 0, "PerpExchange: pending action not found"
-        );
+        PendingActionMeta memory actionMeta = pendingActionMetas[pendingActionId];
+        require(actionMeta.actionType > 0, "PerpExchange: pending action not found");
 
         // Assert revert delay
         uint256 revertDelay = lnConfig.getUint(CONFIG_TRADE_REVERT_DELAY);
         require(revertDelay > 0, "PerpExchange: revert delay not set");
-        require(
-            block.timestamp > actionMeta.timestamp + revertDelay,
-            "PerpExchange: revert delay not passed"
-        );
+        require(block.timestamp > actionMeta.timestamp + revertDelay, "PerpExchange: revert delay not passed");
 
         // Refund collateral taken
         if (actionMeta.actionType == ACTION_TYPE_OPEN_POSITION) {
@@ -340,8 +232,7 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
             );
         } else if (actionMeta.actionType == ACTION_TYPE_INCREASE_POSITION) {
             IERC20Upgradeable(address(lusdToken)).transfer(
-                actionMeta.user,
-                increasePositionActions[pendingActionId].collateral
+                actionMeta.user, increasePositionActions[pendingActionId].collateral
             );
         }
 
@@ -354,9 +245,7 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
     function submitFees(uint256 positionId, uint256 amount) external override {
         require(poolFeeHolder != address(0), "PerpExchange: fee pool not set");
 
-        IERC20Upgradeable(address(lusdToken)).transferFrom(
-            msg.sender, address(this), amount
-        );
+        IERC20Upgradeable(address(lusdToken)).transferFrom(msg.sender, address(this), amount);
 
         uint256 foundationSplit;
         if (foundationFeeHolder == address(0)) {
@@ -373,34 +262,21 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
         }
 
         if (amount > 0) {
-            IERC20Upgradeable(address(lusdToken)).transfer(
-                poolFeeHolder, amount
-            );
+            IERC20Upgradeable(address(lusdToken)).transfer(poolFeeHolder, amount);
         }
         if (foundationSplit > 0) {
-            IERC20Upgradeable(address(lusdToken)).transfer(
-                foundationFeeHolder, foundationSplit
-            );
+            IERC20Upgradeable(address(lusdToken)).transfer(foundationFeeHolder, foundationSplit);
         }
 
         emit FeesCharged(positionId, amount, foundationSplit);
     }
 
-    function submitInsuranceFund(uint256 positionId, uint256 amount)
-        external
-        override
-    {
-        IERC20Upgradeable(address(lusdToken)).transferFrom(
-            msg.sender, insuranceFundHolder, amount
-        );
+    function submitInsuranceFund(uint256 positionId, uint256 amount) external override {
+        IERC20Upgradeable(address(lusdToken)).transferFrom(msg.sender, insuranceFundHolder, amount);
         emit InsuranceFundContribution(positionId, amount);
     }
 
-    function requestPositionMint(address to)
-        external
-        override
-        returns (uint256 positionId)
-    {
+    function requestPositionMint(address to) external override returns (uint256 positionId) {
         _assertRegisteredPerp(msg.sender);
         positionId = positionToken.mint(msg.sender, to);
     }
@@ -410,58 +286,34 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
         positionToken.burn(positionId);
     }
 
-    function requestAssetMint(address asset, address account, uint256 amount)
-        external
-        override
-    {
+    function requestAssetMint(address asset, address account, uint256 amount) external override {
         _assertRegisteredPerp(msg.sender);
         IAsset(asset).mint(account, amount);
     }
 
-    function requestAssetBurn(address asset, address account, uint256 amount)
-        external
-        override
-    {
+    function requestAssetBurn(address asset, address account, uint256 amount) external override {
         _assertRegisteredPerp(msg.sender);
         IAsset(asset).burn(account, amount);
     }
 
-    function _queueActionMeta(address user, uint8 actionType)
-        private
-        returns (uint256 actionId)
-    {
+    function _queueActionMeta(address user, uint8 actionType) private returns (uint256 actionId) {
         actionId = ++lastPendingActionId;
-        pendingActionMetas[actionId] = PendingActionMeta({
-            timestamp: block.timestamp.toUint64(),
-            user: user,
-            actionType: actionType
-        });
+        pendingActionMetas[actionId] =
+            PendingActionMeta({timestamp: block.timestamp.toUint64(), user: user, actionType: actionType});
     }
 
-    function _getPerpContract(bytes32 symbol)
-        private
-        view
-        returns (IPerpetual)
-    {
+    function _getPerpContract(bytes32 symbol) private view returns (IPerpetual) {
         address perpAddress = lnAssetSystem.perpAddresses(symbol);
-        require(
-            perpAddress != address(0), "PerpExchange: perp address not found"
-        );
+        require(perpAddress != address(0), "PerpExchange: perp address not found");
 
         return IPerpetual(perpAddress);
     }
 
     function _assertRegisteredPerp(address perpAddress) private view {
-        require(
-            lnAssetSystem.isPerpAddressRegistered(perpAddress),
-            "PerpExchange: perp address not registered"
-        );
+        require(lnAssetSystem.isPerpAddressRegistered(perpAddress), "PerpExchange: perp address not registered");
     }
 
-    function _assertPositionExists(bytes32 symbol, uint256 positionId)
-        private
-        view
-    {
+    function _assertPositionExists(bytes32 symbol, uint256 positionId) private view {
         require(
             positionToken.positionExists(address(_getPerpContract(symbol)), positionId),
             "PerpExchange: position not found"

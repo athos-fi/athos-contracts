@@ -6,16 +6,9 @@ interface IRewardLocker {
 
     function totalLockedAmount() external view returns (uint256);
 
-    function addReward(address user, uint256 amount, uint256 unlockTime)
-        external;
+    function addReward(address user, uint256 amount, uint256 unlockTime) external;
 
-    function moveReward(
-        address from,
-        address recipient,
-        uint256 amount,
-        uint256[] calldata rewardEntryIds
-    )
-        external;
+    function moveReward(address from, address recipient, uint256 amount, uint256[] calldata rewardEntryIds) external;
 
     function moveRewardProRata(
         address from,

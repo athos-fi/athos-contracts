@@ -5,14 +5,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "./interfaces/IPerpPositionToken.sol";
 
-contract PerpPositionToken is
-    IPerpPositionToken,
-    ERC721Upgradeable,
-    OwnableUpgradeable
-{
-    event PositionTokenMinted(
-        uint256 indexed tokenId, address indexed perpAddress, address indexed to
-    );
+contract PerpPositionToken is IPerpPositionToken, ERC721Upgradeable, OwnableUpgradeable {
+    event PositionTokenMinted(uint256 indexed tokenId, address indexed perpAddress, address indexed to);
 
     uint256 public lastPositionId;
     mapping(uint256 => address) public positionPerpAddresses; // Provides access to underlying position data on-chain
@@ -30,12 +24,7 @@ contract PerpPositionToken is
         _;
     }
 
-    function positionExists(address perpAddress, uint256 positionId)
-        external
-        view
-        override
-        returns (bool)
-    {
+    function positionExists(address perpAddress, uint256 positionId) external view override returns (bool) {
         return positionPerpAddresses[positionId] == perpAddress;
     }
 
@@ -52,11 +41,7 @@ contract PerpPositionToken is
         burner = newBurner;
     }
 
-    function mint(address perpAddress, address to)
-        external
-        onlyMinter
-        returns (uint256 tokenId)
-    {
+    function mint(address perpAddress, address to) external onlyMinter returns (uint256 tokenId) {
         tokenId = ++lastPositionId;
 
         positionPerpAddresses[tokenId] = perpAddress;

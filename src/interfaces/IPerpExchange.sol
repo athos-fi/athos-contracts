@@ -8,15 +8,11 @@ interface IPerpExchange {
 
     function submitInsuranceFund(uint256 positionId, uint256 amount) external;
 
-    function requestPositionMint(address to)
-        external
-        returns (uint256 positionId);
+    function requestPositionMint(address to) external returns (uint256 positionId);
 
     function requestPositionBurn(uint256 positionId) external;
 
-    function requestAssetMint(address asset, address account, uint256 amount)
-        external;
+    function requestAssetMint(address asset, address account, uint256 amount) external;
 
-    function requestAssetBurn(address asset, address account, uint256 amount)
-        external;
+    function requestAssetBurn(address asset, address account, uint256 amount) external;
 }
