@@ -53,6 +53,13 @@ export class StackManager {
   }
 
   public setDeployment(key: DeploymentKey, address: string) {
+    if (this.stack.contracts[key]) {
+      throw new Error(`Deployment already set ${key}`);
+    }
+    this.overwriteDeployment(key, address);
+  }
+
+  public overwriteDeployment(key: DeploymentKey, address: string) {
     this.stack.contracts[key] = {
       contract: contractNamesByDeploymentKey[key],
       address: getAddress(address),

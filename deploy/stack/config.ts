@@ -1,4 +1,13 @@
 export interface Config {
+  foundationFeeHolder: string;
+  insurnaceFundHolder: string;
+  rewardSigner: string;
+  twapUpdater: string;
+  firstRewardPeriodStartTime: string;
+  uniswapFactory: string;
+  weth: string;
+  usdc: string;
+  chainlinkAggregators: { string: string };
   airdrops: AirdropConfig[];
 }
 
