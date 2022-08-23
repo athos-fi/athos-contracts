@@ -23,8 +23,7 @@ do
   echo "Flattening contract $CONTRACT_NAME.sol"
   forge flatten $CONTRACT_FILE > $DIST_SRC_DIR$CONTRACT_NAME.sol
 
-  # TODO: enable formatting once the tuple formatting bug is resolved
-  # forge fmt $DIST_SRC_DIR$CONTRACT_NAME.sol
+  forge fmt $DIST_SRC_DIR$CONTRACT_NAME.sol
 
   # Wrap sol into JSON
   cat $DIST_SRC_DIR$CONTRACT_NAME.sol | jq -Rs . > $DIST_SRC_DIR$CONTRACT_NAME.json
