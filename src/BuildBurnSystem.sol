@@ -43,10 +43,7 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
         ICollateralSystem _collaterSys,
         IConfig _mConfig,
         address _liquidation
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         __Ownable_init();
 
         require(address(_lUSDToken) != address(0), "BuildBurnSystem: zero address");

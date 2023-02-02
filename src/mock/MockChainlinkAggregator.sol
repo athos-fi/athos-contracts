@@ -39,9 +39,7 @@ contract MockChainlinkAggregator is IChainlinkOracle {
         uint256 newStartedAt,
         uint256 newUpdatedAt,
         uint80 newAnsweredInRound
-    )
-        external
-    {
+    ) external {
         _roundId = newRoundId;
         _answer = newAnswer;
         _startedAt = newStartedAt;

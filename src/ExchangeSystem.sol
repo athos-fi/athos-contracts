@@ -68,10 +68,7 @@ contract ExchangeSystem is OwnableUpgradeable {
         IOracleRouter _mPrices,
         IConfig _mConfig,
         address _mRewardSys
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         __Ownable_init();
 
         require(address(_mAssets) != address(0), "ExchangeSystem: zero address");

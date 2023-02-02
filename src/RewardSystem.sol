@@ -55,10 +55,7 @@ contract RewardSystem is OwnableUpgradeable {
         address _lusdAddress,
         address _collateralSystemAddress,
         address _rewardLockerAddress
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         __Ownable_init();
 
         require(block.timestamp < _firstPeriodStartTime + PERIOD_LENGTH, "RewardSystem: first period already ended");
@@ -112,9 +109,7 @@ contract RewardSystem is OwnableUpgradeable {
         uint256 stakingReward,
         uint256 feeReward,
         bytes calldata signature
-    )
-        external
-    {
+    ) external {
         _claimReward(periodId, recipient, stakingReward, feeReward, signature);
     }
 
@@ -144,9 +139,7 @@ contract RewardSystem is OwnableUpgradeable {
         uint256 stakingReward,
         uint256 feeReward,
         bytes calldata signature
-    )
-        private
-    {
+    ) private {
         require(periodId > 0, "RewardSystem: period ID must be positive");
         require(stakingReward > 0 || feeReward > 0, "RewardSystem: nothing to claim");
 

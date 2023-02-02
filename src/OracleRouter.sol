@@ -110,10 +110,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         bytes32[] calldata currencyKeys,
         address[] calldata oracleAddresses,
         bool removeExisting
-    )
-        external
-        onlyOwner
-    {
+    ) external onlyOwner {
         require(currencyKeys.length == oracleAddresses.length, "OracleRouter: array length mismatch");
 
         for (uint256 ind = 0; ind < currencyKeys.length; ind++) {
@@ -126,10 +123,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         string calldata bandCurrencyKey,
         address oracleAddress,
         bool removeExisting
-    )
-        external
-        onlyOwner
-    {
+    ) external onlyOwner {
         _addBandOracle(currencyKey, bandCurrencyKey, oracleAddress, removeExisting);
     }
 
@@ -138,10 +132,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         string[] calldata bandCurrencyKeys,
         address[] calldata oracleAddresses,
         bool removeExisting
-    )
-        external
-        onlyOwner
-    {
+    ) external onlyOwner {
         require(
             currencyKeys.length == bandCurrencyKeys.length && bandCurrencyKeys.length == oracleAddresses.length,
             "OracleRouter: array length mismatch"
@@ -160,10 +151,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         bytes32[] calldata currencyKeys,
         address[] calldata oracleAddresses,
         bool removeExisting
-    )
-        external
-        onlyOwner
-    {
+    ) external onlyOwner {
         require(currencyKeys.length == oracleAddresses.length, "OracleRouter: array length mismatch");
 
         for (uint256 ind = 0; ind < currencyKeys.length; ind++) {
@@ -182,10 +170,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         bytes32[] calldata currencyKeys,
         uint160[] calldata terminalPrices,
         bool removeExisting
-    )
-        external
-        onlyOwner
-    {
+    ) external onlyOwner {
         require(currencyKeys.length == terminalPrices.length, "OracleRouter: array length mismatch");
 
         for (uint256 ind = 0; ind < currencyKeys.length; ind++) {
@@ -216,9 +201,7 @@ contract OracleRouter is IOracleRouter, OwnableUpgradeable {
         string calldata bandCurrencyKey,
         address oracleAddress,
         bool removeExisting
-    )
-        private
-    {
+    ) private {
         require(currencyKey != bytes32(0), "OracleRouter: empty currency key");
         require(bytes(bandCurrencyKey).length != 0, "OracleRouter: empty band currency key");
         require(oracleAddress != address(0), "OracleRouter: empty oracle address");

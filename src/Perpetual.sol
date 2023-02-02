@@ -108,10 +108,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         uint256 _feeRate,
         uint256 _liquidatorRewardRatio,
         uint256 _insuranceFundContributionRatio
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         __Ownable_init();
 
         require(address(_exchange) != address(0), "Perpetual: zero address");
@@ -330,8 +327,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
 
         address positionOwner = IERC721Upgradeable(address(positionToken)).ownerOf(positionId);
 
-        (uint256 fees, uint256 underlyingPrice, uint256 liquidatorReward) =
-            positions[positionId].isLong
+        (uint256 fees, uint256 underlyingPrice, uint256 liquidatorReward) = positions[positionId].isLong
             ? _closeLongPosition(positionOwner, positionId, amount, positionOwner, true)
             : _closeShortPosition(positionOwner, positionId, amount, positionOwner, true);
 
@@ -342,8 +338,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         );
 
         // No contribution is holder not set
-        uint256 insuranceContribution =
-            exchange.insuranceFundHolder() == address(0)
+        uint256 insuranceContribution = exchange.insuranceFundHolder() == address(0)
             ? 0
             : liquidatorReward.mul(insuranceFundContributionRatio).div(UNIT);
         liquidatorReward = liquidatorReward.sub(insuranceContribution);
@@ -358,7 +353,14 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
         }
 
         emit PoistionLiquidated(
-            positionOwner, positionId, amount, underlyingPrice, liquidator, fees, liquidatorReward, insuranceContribution
+            positionOwner,
+            positionId,
+            amount,
+            underlyingPrice,
+            liquidator,
+            fees,
+            liquidatorReward,
+            insuranceContribution
             );
     }
 

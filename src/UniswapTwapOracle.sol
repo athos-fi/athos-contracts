@@ -45,10 +45,7 @@ contract UniswapTwapOracle is IUniswapTwapOracle, AccessControlUpgradeable {
         uint256 _maxInterval,
         uint256 _minPrice,
         uint256 _maxPrice
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         require(address(_checkpoints) != address(0), "UniswapTwapOracle: zero address");

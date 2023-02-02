@@ -88,10 +88,7 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
         IPerpPositionToken _positionToken,
         IAsset _lusdToken,
         address _insuranceFundHolder
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         __Ownable_init();
 
         require(address(_lnAssetSystem) != address(0), "PerpExchange: zero address");
@@ -139,8 +136,12 @@ contract PerpExchange is IPerpExchange, OwnableUpgradeable {
         IERC20Upgradeable(address(lusdToken)).transferFrom(msg.sender, address(this), collateral);
 
         uint256 actionId = _queueActionMeta(msg.sender, ACTION_TYPE_INCREASE_POSITION);
-        increasePositionActions[actionId] =
-            IncreasePositionActionData({underlying: underlying, positionId: positionId, size: size, collateral: collateral});
+        increasePositionActions[actionId] = IncreasePositionActionData({
+            underlying: underlying,
+            positionId: positionId,
+            size: size,
+            collateral: collateral
+        });
 
         emit IncreasePositionActionQueued(actionId, msg.sender, underlying, positionId, size, collateral);
     }

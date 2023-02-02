@@ -50,10 +50,7 @@ contract AirdropDistributor is OwnableUpgradeable {
         uint256 _unlockCount,
         IRewardLocker _rewardLocker,
         IERC20Upgradeable _token
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         __Ownable_init();
 
         require(_deadline > block.timestamp && _startTime < _deadline, "AirdropDistributor: invalid timestamps");

@@ -35,8 +35,6 @@ jobs:
 
       - name: Check format with Forge
         run: |
-          # `forge fmt` bug causing error in this file
-          rm src/utilities/TransferHelper.sol
           forge --version
           forge fmt --check src
           forge fmt --check test

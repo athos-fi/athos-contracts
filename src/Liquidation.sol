@@ -115,10 +115,7 @@ contract Liquidation is OwnableUpgradeable {
         IDebtSystem _debtSystem,
         IOracleRouter _oracleRouter,
         IRewardLocker _rewardLocker
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         __Ownable_init();
 
         require(address(_buildBurnSystem) != address(0), "Liquidation: zero address");
@@ -318,11 +315,7 @@ contract Liquidation is OwnableUpgradeable {
         uint256 collateralPrice,
         uint256 markerRewardRatio,
         uint256 liquidatorRewardRatio
-    )
-        private
-        pure
-        returns (LiquidationRewardCalculationResult memory)
-    {
+    ) private pure returns (LiquidationRewardCalculationResult memory) {
         // Amount of collateral with the same value as the debt burnt (without taking into account rewards)
         uint256 collateralWithdrawalAmount = lusdToBurn.divideDecimal(collateralPrice);
 

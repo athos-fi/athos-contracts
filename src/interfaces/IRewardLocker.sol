@@ -17,6 +17,5 @@ interface IRewardLocker {
         address recipient2,
         uint256 amount2,
         uint256[] calldata rewardEntryIds
-    )
-        external;
+    ) external;
 }

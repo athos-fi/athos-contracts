@@ -110,11 +110,7 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         address recipient2,
         uint256 amount2,
         uint256[] calldata rewardEntryIds
-    )
-        external
-        override
-        onlyMoveRewardRole
-    {
+    ) external override onlyMoveRewardRole {
         _moveRewardProRata(from, recipient1, amount1, recipient2, amount2, rewardEntryIds);
     }
 
@@ -145,10 +141,7 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         uint256[] calldata entriesIds,
         uint216[] calldata newAmounts,
         uint40[] calldata newUnlockTimes
-    )
-        external
-        onlyOwner
-    {
+    ) external onlyOwner {
         require(entriesIds.length > 0 && newAmounts.length > 0, "RewardLocker: empty array");
         require(newAmounts.length == newUnlockTimes.length, "RewardLocker: array length mismatch");
 
@@ -235,9 +228,7 @@ contract RewardLocker is IRewardLocker, OwnableUpgradeable {
         address recipient2,
         uint256 amount2,
         uint256[] calldata rewardEntryIds
-    )
-        private
-    {
+    ) private {
         // Check amount and adjust from balance directly
         uint256 totalAmount = amount1.add(amount2);
         require(totalAmount > 0 && totalAmount <= lockedAmountByAddresses[from], "RewardLocker: amount out of range");

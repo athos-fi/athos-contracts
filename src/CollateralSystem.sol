@@ -119,10 +119,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         IRewardLocker _mRewardLocker,
         IBuildBurnSystem _buildBurnSystem,
         address _liquidation
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         __Ownable_init();
 
         require(address(_priceGetter) != address(0), "CollateralSystem: zero address");
@@ -198,11 +195,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         address[] calldata _tokenAddrs,
         uint256[] calldata _minCollateral,
         bool[] calldata _closes
-    )
-        external
-        onlyOwner
-        returns (bool)
-    {
+    ) external onlyOwner returns (bool) {
         require(_symbols.length == _tokenAddrs.length, "length of array not eq");
         require(_symbols.length == _minCollateral.length, "length of array not eq");
         require(_symbols.length == _closes.length, "length of array not eq");

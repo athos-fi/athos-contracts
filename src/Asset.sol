@@ -34,10 +34,7 @@ contract Asset is IAsset, ERC20Upgradeable, OwnableUpgradeable {
         string memory _name,
         string memory _symbol,
         IAccessControlUpgradeable _accessCtrl
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         __ERC20_init(_name, _symbol);
         __Ownable_init();
 
