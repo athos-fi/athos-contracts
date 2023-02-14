@@ -16,8 +16,8 @@ contract Liquidation is OwnableUpgradeable {
     using SafeDecimalMath for uint256;
     using SafeMathUpgradeable for uint256;
 
-    event PositionMarked(address user, address marker);
-    event PositionUnmarked(address user);
+    event PositionMarked(address user, address marker, bytes32 currencySymbol);
+    event PositionUnmarked(address user, bytes32 currencySymbol);
     event PositionLiquidated(
         address user,
         address marker,
@@ -42,6 +42,7 @@ contract Liquidation is OwnableUpgradeable {
         uint256 collateralPrice;
         uint256 collateralValue;
         uint256 collateralizationRatio;
+        bytes32 currencySymbol;
     }
 
     struct FetchRatiosResult {
@@ -61,6 +62,7 @@ contract Liquidation is OwnableUpgradeable {
         address user;
         address liquidator;
         uint256 lusdToBurn;
+        bytes32 currencySymbol;
     }
 
     struct WithdrawCollateralParams {
@@ -69,6 +71,7 @@ contract Liquidation is OwnableUpgradeable {
         uint256 collateralWithdrawalAmount;
         uint256 stakedCollateral;
         uint256 lockedCollateral;
+        bytes32 currencySymbol;
     }
 
     struct DistributeRewardsParams {
@@ -79,6 +82,7 @@ contract Liquidation is OwnableUpgradeable {
         uint256 liquidatorReward;
         uint256 stakedCollateral;
         uint256 lockedCollateral;
+        bytes32 currencySymbol;
     }
 
     IBuildBurnSystem public buildBurnSystem;
@@ -90,22 +94,68 @@ contract Liquidation is OwnableUpgradeable {
 
     mapping(address => UndercollateralizationMark) public undercollateralizationMarks;
 
+    bytes32 public constant CURRENCY_LINA = "ATH";
+
     bytes32 public constant LIQUIDATION_MARKER_REWARD_KEY = "LiquidationMarkerReward";
     bytes32 public constant LIQUIDATION_LIQUIDATOR_REWARD_KEY = "LiquidationLiquidatorReward";
     bytes32 public constant LIQUIDATION_RATIO_KEY = "LiquidationRatio";
     bytes32 public constant LIQUIDATION_DELAY_KEY = "LiquidationDelay";
     bytes32 public constant BUILD_RATIO_KEY = "BuildRatio";
 
+    struct ConfigKey {
+        bytes32 liquidationReward;
+        bytes32 liquidationRatio;
+    }
+
+    mapping(bytes32 => ConfigKey) public configKeys;
+    mapping(bytes32 => mapping(address => UndercollateralizationMark)) public undercollateralizationMarksByCurrency;
+
     function isPositionMarkedAsUndercollateralized(address user) public view returns (bool) {
         return undercollateralizationMarks[user].timestamp > 0;
+    }
+
+    function isPositionMarkedAsUndercollateralizedByCurrency(address user, bytes32 currencySymbol)
+        public
+        view
+        returns (bool)
+    {
+        if (currencySymbol == CURRENCY_LINA) {
+            return undercollateralizationMarks[user].timestamp > 0;
+        } else {
+            return undercollateralizationMarksByCurrency[currencySymbol][user].timestamp > 0;
+        }
     }
 
     function getUndercollateralizationMarkMarker(address user) public view returns (address) {
         return undercollateralizationMarks[user].marker;
     }
 
+    function getUndercollateralizationMarkMarkerByCurrency(address user, bytes32 currencySymbol)
+        public
+        view
+        returns (address)
+    {
+        if (currencySymbol == CURRENCY_LINA) {
+            return undercollateralizationMarks[user].marker;
+        } else {
+            return undercollateralizationMarksByCurrency[currencySymbol][user].marker;
+        }
+    }
+
     function getUndercollateralizationMarkTimestamp(address user) public view returns (uint256) {
         return uint256(undercollateralizationMarks[user].timestamp);
+    }
+
+    function getUndercollateralizationMarkTimestamp(address user, bytes32 currencySymbol)
+        public
+        view
+        returns (uint256)
+    {
+        if (currencySymbol == CURRENCY_LINA) {
+            return uint256(undercollateralizationMarks[user].timestamp);
+        } else {
+            return uint256(undercollateralizationMarksByCurrency[currencySymbol][user].timestamp);
+        }
     }
 
     function __Liquidation_init(
@@ -133,52 +183,137 @@ contract Liquidation is OwnableUpgradeable {
         rewardLocker = _rewardLocker;
     }
 
+    function setConfigKey(bytes32 currencySymbol, bytes32 liquidationRewardKey, bytes32 liquidationRatioKey)
+        external
+        onlyOwner
+    {
+        configKeys[currencySymbol] =
+            ConfigKey({liquidationReward: liquidationRewardKey, liquidationRatio: liquidationRatioKey});
+    }
+
     function setOracleRouter(IOracleRouter newOracleRouter) external onlyOwner {
         require(address(newOracleRouter) != address(0), "Liquidation: zero address");
         oracleRouter = newOracleRouter;
     }
 
     function markPositionAsUndercollateralized(address user) external {
-        require(!isPositionMarkedAsUndercollateralized(user), "Liquidation: already marked");
+        _markPositionAsUndercollateralizedByCurrency(user, CURRENCY_LINA);
+    }
 
-        EvalUserPositionResult memory evalResult = evalUserPostion(user);
-        uint256 liquidationRatio = config.getUint(LIQUIDATION_RATIO_KEY);
+    function markPositionAsUndercollateralizedByCurrency(address user, bytes32 currencySymbol) external {
+        _markPositionAsUndercollateralizedByCurrency(user, currencySymbol);
+    }
+
+    function _markPositionAsUndercollateralizedByCurrency(address user, bytes32 currencySymbol) private {
+        require(!isPositionMarkedAsUndercollateralizedByCurrency(user, currencySymbol), "LnLiquidation: already marked");
+
+        EvalUserPositionResult memory evalResult = evalUserPostion(user, currencySymbol);
+        uint256 liquidationRatio = config.getUint(configKeys[currencySymbol].liquidationRatio);
         require(evalResult.collateralizationRatio > liquidationRatio, "Liquidation: not undercollateralized");
 
-        undercollateralizationMarks[user] =
-            UndercollateralizationMark({marker: msg.sender, timestamp: uint64(block.timestamp)});
+        if (currencySymbol == CURRENCY_LINA) {
+            undercollateralizationMarks[user] =
+                UndercollateralizationMark({marker: msg.sender, timestamp: uint64(block.timestamp)});
+        } else {
+            undercollateralizationMarksByCurrency[currencySymbol][user] =
+                UndercollateralizationMark({marker: msg.sender, timestamp: uint64(block.timestamp)});
+        }
 
-        emit PositionMarked(user, msg.sender);
+        emit PositionMarked(user, msg.sender, currencySymbol);
     }
 
     function removeUndercollateralizationMark(address user) external {
-        require(isPositionMarkedAsUndercollateralized(user), "Liquidation: not marked");
+        _removeUndercollateralizationMarkByCurrency(user, CURRENCY_LINA);
+    }
+
+    function removeUndercollateralizationMarkByCurrency(address user, bytes32 currencySymbol) external {
+        _removeUndercollateralizationMarkByCurrency(user, currencySymbol);
+    }
+
+    function _removeUndercollateralizationMarkByCurrency(address user, bytes32 currencySymbol) private {
+        require(isPositionMarkedAsUndercollateralizedByCurrency(user, currencySymbol), "LnLiquidation: not marked");
 
         // Can only remove mark if C ratio is restored to issuance ratio
-        EvalUserPositionResult memory evalResult = evalUserPostion(user);
+        EvalUserPositionResult memory evalResult = evalUserPostion(user, currencySymbol);
         uint256 issuanceRatio = config.getUint(BUILD_RATIO_KEY);
         require(evalResult.collateralizationRatio <= issuanceRatio, "Liquidation: still undercollateralized");
 
-        delete undercollateralizationMarks[user];
+        if (currencySymbol == CURRENCY_LINA) {
+            delete undercollateralizationMarks[user];
+        } else {
+            delete undercollateralizationMarksByCurrency[currencySymbol][user];
+        }
 
-        emit PositionUnmarked(user);
+        emit PositionUnmarked(user, currencySymbol);
     }
 
+    /**
+     * @notice This function is deprecated as it only liquidates LINA. Use
+     * `liquidateCollateralPosition()` instead. This function is not removed since it's still
+     *  used by some services.
+     */
     function liquidatePosition(address user, uint256 lusdToBurn, uint256[] calldata rewardEntryIds) external {
         require(lusdToBurn > 0, "Liquidation: zero amount");
 
         _liquidatePosition(
-            LiquidatePositionParams({user: user, liquidator: msg.sender, lusdToBurn: lusdToBurn}), rewardEntryIds
+            LiquidatePositionParams({
+                user: user,
+                liquidator: msg.sender,
+                lusdToBurn: lusdToBurn,
+                currencySymbol: CURRENCY_LINA
+            }),
+            rewardEntryIds
         );
     }
 
+    function liquidateCollateralPosition(
+        address user,
+        bytes32 currencySymbol,
+        uint256 lusdToBurn,
+        uint256[] calldata rewardEntryIds
+    ) external {
+        require(lusdToBurn > 0, "LnLiquidation: zero amount");
+
+        _liquidatePosition(
+            LiquidatePositionParams({
+                user: user,
+                liquidator: msg.sender,
+                lusdToBurn: lusdToBurn,
+                currencySymbol: currencySymbol
+            }),
+            rewardEntryIds
+        );
+    }
+
+    /**
+     * @notice This function is deprecated as it only liquidates LINA. Use
+     * `liquidateCollateralPositionMax()` instead. This function is not removed since it's still
+     *  used by some services.
+     */
     function liquidatePositionMax(address user, uint256[] calldata rewardEntryIds) external {
-        _liquidatePosition(LiquidatePositionParams({user: user, liquidator: msg.sender, lusdToBurn: 0}), rewardEntryIds);
+        _liquidatePosition(
+            LiquidatePositionParams({user: user, liquidator: msg.sender, lusdToBurn: 0, currencySymbol: CURRENCY_LINA}),
+            rewardEntryIds
+        );
+    }
+
+    function liquidateCollateralPositionMax(address user, bytes32 currencySymbol, uint256[] calldata rewardEntryIds)
+        external
+    {
+        _liquidatePosition(
+            LiquidatePositionParams({user: user, liquidator: msg.sender, lusdToBurn: 0, currencySymbol: currencySymbol}),
+            rewardEntryIds
+        );
     }
 
     function _liquidatePosition(LiquidatePositionParams memory params, uint256[] calldata rewardEntryIds) private {
         // Check mark and delay
-        UndercollateralizationMark memory mark = undercollateralizationMarks[params.user];
+        UndercollateralizationMark memory mark;
+        if (params.currencySymbol == CURRENCY_LINA) {
+            mark = undercollateralizationMarks[params.user];
+        } else {
+            mark = undercollateralizationMarksByCurrency[params.currencySymbol][params.user];
+        }
         {
             uint256 liquidationDelay = config.getUint(LIQUIDATION_DELAY_KEY);
             require(mark.timestamp > 0, "Liquidation: not marked for undercollateralized");
@@ -186,8 +321,8 @@ contract Liquidation is OwnableUpgradeable {
         }
 
         // Confirm that the position is still undercollateralized
-        FetchRatiosResult memory ratios = fetchRatios();
-        EvalUserPositionResult memory evalResult = evalUserPostion(params.user);
+        FetchRatiosResult memory ratios = fetchRatios(params.currencySymbol);
+        EvalUserPositionResult memory evalResult = evalUserPostion(params.user, params.currencySymbol);
         require(evalResult.collateralizationRatio > ratios.issuanceRatio, "Liquidation: not undercollateralized");
 
         uint256 maxLusdToBurn = evalResult.debtBalance.sub(
@@ -208,7 +343,7 @@ contract Liquidation is OwnableUpgradeable {
         }
 
         // Burn lUSD and update debt
-        buildBurnSystem.burnForLiquidation(params.user, params.liquidator, params.lusdToBurn);
+        buildBurnSystem.burnForLiquidation(params.user, params.liquidator, params.lusdToBurn, params.currencySymbol);
 
         LiquidationRewardCalculationResult memory rewards = calculateRewards(
             params.lusdToBurn, evalResult.collateralPrice, ratios.markerRewardRatio, ratios.liquidatorRewardRatio
@@ -232,7 +367,8 @@ contract Liquidation is OwnableUpgradeable {
                     liquidator: params.liquidator,
                     collateralWithdrawalAmount: rewards.collateralWithdrawalAmount,
                     stakedCollateral: evalResult.stakedCollateral,
-                    lockedCollateral: evalResult.lockedCollateral
+                    lockedCollateral: evalResult.lockedCollateral,
+                    currencySymbol: params.currencySymbol
                 }),
                 rewardEntryIds
             );
@@ -252,7 +388,8 @@ contract Liquidation is OwnableUpgradeable {
                     markerReward: rewards.markerReward,
                     liquidatorReward: rewards.liquidatorReward,
                     stakedCollateral: evalResult.stakedCollateral,
-                    lockedCollateral: evalResult.lockedCollateral
+                    lockedCollateral: evalResult.lockedCollateral,
+                    currencySymbol: params.currencySymbol
                 }),
                 rewardEntryIds
             );
@@ -266,7 +403,7 @@ contract Liquidation is OwnableUpgradeable {
             mark.marker,
             params.liquidator,
             params.lusdToBurn,
-            "ATH",
+            params.currencySymbol,
             totalFromStaked,
             totalFromLocked,
             rewards.markerReward,
@@ -275,16 +412,30 @@ contract Liquidation is OwnableUpgradeable {
 
         // If the position is completely liquidated, remove the marker
         if (params.lusdToBurn == maxLusdToBurn) {
-            delete undercollateralizationMarks[params.user];
-            emit PositionUnmarked(params.user);
+            if (params.currencySymbol == CURRENCY_LINA) {
+                delete undercollateralizationMarks[params.user];
+            } else {
+                delete undercollateralizationMarksByCurrency[params.currencySymbol][params.user];
+            }
+            emit PositionUnmarked(params.user, params.currencySymbol);
         }
     }
 
-    function evalUserPostion(address user) private view returns (EvalUserPositionResult memory) {
-        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsd(user);
-        (uint256 stakedCollateral, uint256 lockedCollateral) = collateralSystem.getUserLinaCollateralBreakdown(user);
+    function evalUserPostion(address user, bytes32 currencySymbol)
+        private
+        view
+        returns (EvalUserPositionResult memory)
+    {
+        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsdByCurrency(user, currencySymbol);
+        uint256 stakedCollateral;
+        uint256 lockedCollateral;
+        if (currencySymbol == CURRENCY_LINA) {
+            (stakedCollateral, lockedCollateral) = collateralSystem.getUserLinaCollateralBreakdown(user);
+        } else {
+            stakedCollateral = collateralSystem.GetUserCollateral(user, currencySymbol);
+        }
 
-        uint256 collateralPrice = oracleRouter.getPrice("ATH");
+        uint256 collateralPrice = oracleRouter.getPrice(currencySymbol);
         uint256 collateralValue = stakedCollateral.add(lockedCollateral).multiplyDecimal(collateralPrice);
 
         uint256 collateralizationRatio = collateralValue == 0 ? 0 : debtBalance.divideDecimal(collateralValue);
@@ -294,14 +445,15 @@ contract Liquidation is OwnableUpgradeable {
             lockedCollateral: lockedCollateral,
             collateralPrice: collateralPrice,
             collateralValue: collateralValue,
-            collateralizationRatio: collateralizationRatio
+            collateralizationRatio: collateralizationRatio,
+            currencySymbol: currencySymbol
         });
     }
 
-    function fetchRatios() private view returns (FetchRatiosResult memory) {
-        uint256 issuanceRatio = config.getUint(BUILD_RATIO_KEY);
+    function fetchRatios(bytes32 currencySymbol) private view returns (FetchRatiosResult memory) {
+        uint256 issuanceRatio = config.getUint(config.getBuildRatioKey(currencySymbol));
         uint256 markerRewardRatio = config.getUint(LIQUIDATION_MARKER_REWARD_KEY);
-        uint256 liquidatorRewardRatio = config.getUint(LIQUIDATION_LIQUIDATOR_REWARD_KEY);
+        uint256 liquidatorRewardRatio = config.getUint(configKeys[currencySymbol].liquidationReward);
 
         return FetchRatiosResult({
             issuanceRatio: issuanceRatio,
@@ -342,7 +494,7 @@ contract Liquidation is OwnableUpgradeable {
         require(amountFromLocked <= params.lockedCollateral, "Liquidation: insufficient locked collateral");
 
         if (amountFromStaked > 0) {
-            collateralSystem.moveCollateral(params.user, params.liquidator, "ATH", amountFromStaked);
+            collateralSystem.moveCollateral(params.user, params.liquidator, params.currencySymbol, amountFromStaked);
         }
 
         if (amountFromLocked > 0) {
@@ -371,8 +523,10 @@ contract Liquidation is OwnableUpgradeable {
             markerRewardFromLocked = markerRewardFromLocked.sub(markerRewardFromStaked);
             liquidatorRewardFromLocked = liquidatorRewardFromLocked.sub(liquidatorRewardFromStaked);
 
-            collateralSystem.moveCollateral(params.user, params.marker, "ATH", markerRewardFromStaked);
-            collateralSystem.moveCollateral(params.user, params.liquidator, "ATH", liquidatorRewardFromStaked);
+            collateralSystem.moveCollateral(params.user, params.marker, params.currencySymbol, markerRewardFromStaked);
+            collateralSystem.moveCollateral(
+                params.user, params.liquidator, params.currencySymbol, liquidatorRewardFromStaked
+            );
         }
 
         if (amountFromLocked > 0) {

@@ -73,18 +73,18 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
      * used by `LnBuildBurnSystem`.
      */
     function MaxRedeemableInUsd(address _user) public view returns (uint256) {
-        return getFreeCollateralInUsd(_user);
+        return getFreeCollateralInUsd(_user, Currency_LINA);
     }
 
-    function getFreeCollateralInUsd(address user) public view returns (uint256) {
-        uint256 totalCollateralInUsd = GetUserTotalCollateralInUsd(user);
+    function getFreeCollateralInUsd(address user, bytes32 currencySymbol) public view returns (uint256) {
+        uint256 totalCollateralInUsd = GetUserCollateralInUsd(user, currencySymbol);
 
-        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsd(user);
+        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsdByCurrency(user, currencySymbol);
         if (debtBalance == 0) {
             return totalCollateralInUsd;
         }
 
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+        uint256 buildRatio = mConfig.getUint(mConfig.getBuildRatioKey(currencySymbol));
         uint256 minCollateral = debtBalance.divideDecimal(buildRatio);
         if (totalCollateralInUsd < minCollateral) {
             return 0;
@@ -93,21 +93,32 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         return totalCollateralInUsd.sub(minCollateral);
     }
 
-    function maxRedeemableLina(address user) public view returns (uint256) {
-        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsd(user);
-        uint256 stakedLinaAmount = userCollateralData[user][Currency_LINA].collateral;
+    /**
+     * @notice This function is removed due to contract size limit.
+     */
+    // function maxRedeemableLina(address user) public view returns (uint256) {
+    //     return maxRedeemable(user, Currency_LINA);
+    // }
+
+    function maxRedeemable(address user, bytes32 currencySymbol) public view returns (uint256) {
+        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsdByCurrency(user, currencySymbol);
+        uint256 stakedAmount = userCollateralData[user][currencySymbol].collateral;
 
         if (debtBalance == 0) {
             // User doesn't have debt. All staked collateral is withdrawable
-            return stakedLinaAmount;
+            return stakedAmount;
         } else {
             // User has debt. Must keep a certain amount
-            uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+            uint256 buildRatio = mConfig.getUint(mConfig.getBuildRatioKey(currencySymbol));
             uint256 minCollateralUsd = debtBalance.divideDecimal(buildRatio);
-            uint256 minCollateralLina = minCollateralUsd.divideDecimal(priceGetter.getPrice(Currency_LINA));
-            uint256 lockedLinaAmount = mRewardLocker.balanceOf(user);
 
-            return MathUpgradeable.min(stakedLinaAmount, stakedLinaAmount.add(lockedLinaAmount).sub(minCollateralLina));
+            uint256 minCollateralToken = minCollateralUsd.divideDecimal(priceGetter.getPrice(currencySymbol));
+            if (currencySymbol == Currency_LINA) {
+                uint256 lockedLinaAmount = mRewardLocker.balanceOf(user);
+                return MathUpgradeable.min(stakedAmount, stakedAmount.add(lockedLinaAmount).sub(minCollateralToken));
+            } else {
+                return stakedAmount.sub(minCollateralToken);
+            }
         }
     }
 
@@ -169,11 +180,10 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
             tokenSymbol.push(_currency);
         }
 
-        uint256 totalCollateral = tokenInfos[_currency].totalCollateral;
         tokenInfos[_currency] = TokenInfo({
             tokenAddr: _tokenAddr,
             minCollateral: _minCollateral,
-            totalCollateral: totalCollateral,
+            totalCollateral: tokenInfos[_currency].totalCollateral,
             bClose: _close
         });
         emit UpdateTokenSetting(_currency, _tokenAddr, _minCollateral, _close);
@@ -225,16 +235,19 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         }
     }
 
+    function GetUserCollateralInUsd(address _user, bytes32 _currencySymbol) public view returns (uint256 rTotal) {
+        uint256 collateralAmount = userCollateralData[_user][_currencySymbol].collateral;
+        if (Currency_LINA == _currencySymbol) {
+            collateralAmount = collateralAmount.add(mRewardLocker.balanceOf(_user));
+        }
+        if (collateralAmount > 0) {
+            rTotal = rTotal.add(collateralAmount.multiplyDecimal(priceGetter.getPrice(_currencySymbol)));
+        }
+    }
+
     function GetUserTotalCollateralInUsd(address _user) public view returns (uint256 rTotal) {
         for (uint256 i = 0; i < tokenSymbol.length; i++) {
-            bytes32 currency = tokenSymbol[i];
-            uint256 collateralAmount = userCollateralData[_user][currency].collateral;
-            if (Currency_LINA == currency) {
-                collateralAmount = collateralAmount.add(mRewardLocker.balanceOf(_user));
-            }
-            if (collateralAmount > 0) {
-                rTotal = rTotal.add(collateralAmount.multiplyDecimal(priceGetter.getPrice(currency)));
-            }
+            rTotal = rTotal.add(GetUserCollateralInUsd(_user, tokenSymbol[i]));
         }
 
         if (userCollateralData[_user][Currency_ETH].collateral > 0) {
@@ -293,7 +306,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         }
 
         if (buildAmount > 0) {
-            buildBurnSystem.buildFromCollateralSys(msg.sender, buildAmount);
+            buildBurnSystem.buildFromCollateralSys(msg.sender, buildAmount, stakeCurrency);
         }
     }
 
@@ -307,7 +320,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         require(stakeAmount > 0, "CollateralSystem: zero amount");
 
         _collateral(msg.sender, stakeCurrency, stakeAmount);
-        buildBurnSystem.buildMaxFromCollateralSys(msg.sender);
+        buildBurnSystem.buildMaxFromCollateralSys(msg.sender, stakeCurrency);
     }
 
     /**
@@ -325,7 +338,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         require(burnAmount > 0 || unstakeAmount > 0, "CollateralSystem: zero amount");
 
         if (burnAmount > 0) {
-            buildBurnSystem.burnFromCollateralSys(msg.sender, burnAmount);
+            buildBurnSystem.burnFromCollateralSys(msg.sender, burnAmount, unstakeCurrency);
         }
 
         if (unstakeAmount > 0) {
@@ -342,7 +355,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
     function burnAndUnstakeMax(uint256 burnAmount, bytes32 unstakeCurrency) external whenNotPaused {
         require(burnAmount > 0, "CollateralSystem: zero amount");
 
-        buildBurnSystem.burnFromCollateralSys(msg.sender, burnAmount);
+        buildBurnSystem.burnFromCollateralSys(msg.sender, burnAmount, unstakeCurrency);
         _redeemMax(msg.sender, unstakeCurrency);
     }
 
@@ -353,36 +366,45 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
     }
 
     function _collateral(address user, bytes32 _currency, uint256 _amount) private whenNotPaused returns (bool) {
-        require(tokenInfos[_currency].tokenAddr.isContract(), "Invalid token symbol");
-        TokenInfo storage tokeninfo = tokenInfos[_currency];
-        require(_amount > tokeninfo.minCollateral, "Collateral amount too small");
-        require(tokeninfo.bClose == false, "This token is closed");
+        TokenInfo storage tokenInfo = tokenInfos[_currency];
+        require(_amount > tokenInfo.minCollateral, "Collateral amount too small");
+        require(tokenInfo.tokenAddr != address(0) && tokenInfo.bClose == false, "Invalid collateral");
 
-        IERC20Upgradeable erc20 = IERC20Upgradeable(tokenInfos[_currency].tokenAddr);
+        require(tokenInfo.tokenAddr.isContract(), "Invalid token symbol");
+
+        IERC20Upgradeable erc20 = IERC20Upgradeable(tokenInfo.tokenAddr);
         require(erc20.balanceOf(user) >= _amount, "insufficient balance");
         require(erc20.allowance(user, address(this)) >= _amount, "insufficient allowance, need approve more amount");
 
-        erc20.transferFrom(user, address(this), _amount);
+        TransferHelper.safeTransferFrom(tokenInfo.tokenAddr, user, address(this), _amount);
 
         userCollateralData[user][_currency].collateral = userCollateralData[user][_currency].collateral.add(_amount);
-        tokeninfo.totalCollateral = tokeninfo.totalCollateral.add(_amount);
+        tokenInfo.totalCollateral = tokenInfo.totalCollateral.add(_amount);
 
         emit CollateralLog(user, _currency, _amount, userCollateralData[user][_currency].collateral);
         return true;
     }
 
+    /**
+     * @notice This function is deprecated as it only return the boolean of whether
+     * target ratio of LINA is satisfied. Use IsSatisfyTargetRatioByCurrency()` instead.
+     */
     function IsSatisfyTargetRatio(address _user) public view returns (bool) {
-        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsd(_user);
+        return IsSatisfyTargetRatioByCurrency(_user, Currency_LINA);
+    }
+
+    function IsSatisfyTargetRatioByCurrency(address _user, bytes32 _currencySymbol) public view returns (bool) {
+        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsdByCurrency(_user, _currencySymbol);
         if (debtBalance == 0) {
             return true;
         }
 
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
-        uint256 totalCollateralInUsd = GetUserTotalCollateralInUsd(_user);
-        if (totalCollateralInUsd == 0) {
+        uint256 buildRatio = mConfig.getUint(mConfig.getBuildRatioKey(_currencySymbol));
+        uint256 collateralInUsd = GetUserCollateralInUsd(_user, _currencySymbol);
+        if (collateralInUsd == 0) {
             return false;
         }
-        uint256 myratio = debtBalance.divideDecimal(totalCollateralInUsd);
+        uint256 myratio = debtBalance.divideDecimal(collateralInUsd);
         return myratio <= buildRatio;
     }
 
@@ -391,26 +413,24 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
     }
 
     function _redeemMax(address user, bytes32 _currency) private {
-        require(_currency == Currency_LINA, "CollateralSystem: only ATH is supported");
-        _Redeem(user, Currency_LINA, maxRedeemableLina(user));
+        _Redeem(user, _currency, maxRedeemable(user, _currency));
     }
 
     function _Redeem(address user, bytes32 _currency, uint256 _amount) internal {
-        require(_currency == Currency_LINA, "CollateralSystem: only ATH is supported");
-        require(_amount > 0, "CollateralSystem: zero amount");
+        TokenInfo storage tokenInfo = tokenInfos[_currency];
+        require(tokenInfo.tokenAddr != address(0), "LnCollateralSystem: token address cannot zero");
+        require(tokenInfo.bClose == false, "LnCollateralSystem: This token is closed");
+        require(_amount > 0, "LnCollateralSystem: zero amount");
 
-        uint256 maxRedeemableLinaAmount = maxRedeemableLina(user);
-        require(_amount <= maxRedeemableLinaAmount, "CollateralSystem: insufficient collateral");
+        require(_amount <= maxRedeemable(user, _currency), "LnCollateralSystem: insufficient collateral"); // Re-entrance prevention
 
-        userCollateralData[user][Currency_LINA].collateral =
-            userCollateralData[user][Currency_LINA].collateral.sub(_amount);
+        userCollateralData[user][_currency].collateral = userCollateralData[user][_currency].collateral.sub(_amount);
 
-        TokenInfo storage tokeninfo = tokenInfos[Currency_LINA];
-        tokeninfo.totalCollateral = tokeninfo.totalCollateral.sub(_amount);
+        tokenInfo.totalCollateral = tokenInfo.totalCollateral.sub(_amount);
 
-        IERC20Upgradeable(tokeninfo.tokenAddr).transfer(user, _amount);
+        TransferHelper.safeTransfer(tokenInfo.tokenAddr, user, _amount);
 
-        emit RedeemCollateral(user, Currency_LINA, _amount, userCollateralData[user][Currency_LINA].collateral);
+        emit RedeemCollateral(user, _currency, _amount, userCollateralData[user][_currency].collateral);
     }
 
     // 1. After redeem, collateral ratio need bigger than target ratio.

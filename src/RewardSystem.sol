@@ -156,7 +156,7 @@ contract RewardSystem is OwnableUpgradeable {
         userLastClaimPeriodIds[recipient] = periodId;
 
         // Users can only claim rewards if target ratio is satisfied
-        require(collateralSystem.IsSatisfyTargetRatio(recipient), "RewardSystem: below target ratio");
+        require(collateralSystem.IsSatisfyTargetRatioByCurrency(recipient, "ATH"), "RewardSystem: below target ratio");
 
         // Verify EIP-712 signature
         bytes32 digest = keccak256(
