@@ -41,7 +41,8 @@ describe("CollateralSystem", function () {
 
     athToken = await MockERC20.deploy(
       "Athos Finance", // _name
-      "ATH" // _symbol
+      "ATH", // _symbol
+      18 // _decimals
     );
 
     assetRegistry = await AssetRegistry.deploy();
