@@ -65,15 +65,15 @@ describe("Integration | Unlock Reward", function () {
     stack = await deployAthosStack(deployer);
 
     // Mint 1,000,000 ATH to Alice
-    await stack.athToken
+    await stack.collaterals.ath.token
       .connect(deployer)
       .transfer(alice.address, expandTo18Decimals(1_000_000));
 
-    await stack.athToken
+    await stack.collaterals.ath.token
       .connect(alice)
-      .approve(stack.collateralSystem.address, uint256Max);
+      .approve(stack.collaterals.ath.collateralSystem.address, uint256Max);
 
-    await stack.athToken
+    await stack.collaterals.ath.token
       .connect(alice)
       .transfer(rewarder.address, expandTo18Decimals(10_000));
 
@@ -99,14 +99,14 @@ describe("Integration | Unlock Reward", function () {
 
   it("end to end test from claim reward to unlock reward", async () => {
     // Alice stakes 9,000 ATH
-    await stack.collateralSystem.connect(alice).Collateral(
+    await stack.collaterals.ath.collateralSystem.connect(alice).Collateral(
       formatBytes32String("ATH"), // _currency
       expandTo18Decimals(9_000) // _amount
     );
 
     // Returns 9,000 when locked amount is zero
     expect(
-      await stack.collateralSystem.maxRedeemableLina(
+      await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
         alice.address // user
       )
     ).to.equal(expandTo18Decimals(9_000));
@@ -151,9 +151,12 @@ describe("Integration | Unlock Reward", function () {
     );
 
     // Approve lnCollateralSystem to spend ATH from rewarder
-    await stack.athToken
+    await stack.collaterals.ath.token
       .connect(rewarder)
-      .approve(stack.collateralSystem.address, expandTo18Decimals(100));
+      .approve(
+        stack.collaterals.ath.collateralSystem.address,
+        expandTo18Decimals(100)
+      );
 
     await expect(
       stack.rewardLocker.connect(rewardUnlocker).unlockReward(
@@ -167,47 +170,47 @@ describe("Integration | Unlock Reward", function () {
         alice.address, // user
         expandTo18Decimals(100) // amount
       )
-      .to.emit(stack.collateralSystem, "CollateralUnlockReward")
+      .to.emit(stack.collaterals.ath.collateralSystem, "CollateralUnlockReward")
       .withArgs(
         alice.address,
         formatBytes32String("ATH"),
         expandTo18Decimals(100),
         expandTo18Decimals(9_100)
       )
-      .to.emit(stack.athToken, "Transfer")
+      .to.emit(stack.collaterals.ath.token, "Transfer")
       .withArgs(
         rewarder.address,
-        stack.collateralSystem.address,
+        stack.collaterals.ath.collateralSystem.address,
         expandTo18Decimals(100)
       );
 
     // Returns 9,000 when locked amount is zero
     expect(
-      await stack.collateralSystem.maxRedeemableLina(
+      await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
         alice.address // user
       )
     ).to.equal(expandTo18Decimals(9_100));
 
     await expect(
-      stack.collateralSystem
+      stack.collaterals.ath.collateralSystem
         .connect(alice)
         .RedeemMax(formatBytes32String("ATH"))
     )
-      .to.emit(stack.collateralSystem, "RedeemCollateral")
+      .to.emit(stack.collaterals.ath.collateralSystem, "RedeemCollateral")
       .withArgs(
         alice.address,
         formatBytes32String("ATH"),
         expandTo18Decimals(9_100),
         BigNumber.from("0")
       )
-      .to.emit(stack.athToken, "Transfer")
+      .to.emit(stack.collaterals.ath.token, "Transfer")
       .withArgs(
-        stack.collateralSystem.address,
+        stack.collaterals.ath.collateralSystem.address,
         alice.address,
         expandTo18Decimals(9_100)
       );
 
-    expect(await stack.athToken.balanceOf(alice.address)).to.eq(
+    expect(await stack.collaterals.ath.token.balanceOf(alice.address)).to.eq(
       expandTo18Decimals(990_100)
     );
   });

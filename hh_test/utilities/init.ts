@@ -36,7 +36,7 @@ const { formatBytes32String } = ethers.utils;
 const MOCK_ADDRESS: string = "0x0000000000000000000000000000000000000001";
 
 export interface DeployedStack {
-  athToken: AthToken;
+  collaterals: MultiColalteralContracts;
   accessController: AccessController;
   config: Config;
   ausdToken: Asset;
@@ -44,17 +44,26 @@ export interface DeployedStack {
   abtcPerp: Perpetual;
   oracleRouter: OracleRouter;
   assetRegistry: AssetRegistry;
-  debtSystem: DebtSystem;
-  buildBurnSystem: BuildBurnSystem;
-  collateralSystem: CollateralSystem;
   rewardLocker: RewardLocker;
   rewardSystem: RewardSystem;
-  liquidation: Liquidation;
   exchangeSystem: ExchangeSystem;
   perpPositionToken: PerpPositionToken;
   perpExchange: PerpExchange;
   athOracle: MockChainlinkAggregator;
   abtcOracle: MockChainlinkAggregator;
+}
+
+export interface MultiColalteralContracts {
+  ath: CollateralContracts;
+}
+
+export interface CollateralContracts {
+  symbol: String;
+  token: AthToken;
+  debtSystem: DebtSystem;
+  buildBurnSystem: BuildBurnSystem;
+  collateralSystem: CollateralSystem;
+  liquidation: Liquidation;
 }
 
 export const deployAthosStack = async (
@@ -486,7 +495,16 @@ export const deployAthosStack = async (
     .addChainlinkOracle(formatBytes32String("aBTC"), abtcOracle.address, false);
 
   return {
-    athToken: athToken,
+    collaterals: {
+      ath: {
+        symbol: "ATH",
+        token: athToken,
+        debtSystem: debtSystem,
+        buildBurnSystem: buildBurnSystem,
+        collateralSystem: collateralSystem,
+        liquidation: liquidation,
+      },
+    },
     accessController: accessController,
     config: config,
     ausdToken: ausdToken,
@@ -494,12 +512,8 @@ export const deployAthosStack = async (
     abtcPerp: abtcPerp,
     oracleRouter: oracleRouter,
     assetRegistry: assetRegistry,
-    debtSystem: debtSystem,
-    buildBurnSystem: buildBurnSystem,
-    collateralSystem: collateralSystem,
     rewardLocker: rewardLocker,
     rewardSystem: rewardSystem,
-    liquidation: liquidation,
     exchangeSystem: exchangeSystem,
     perpPositionToken: perpPositionToken,
     perpExchange: perpExchange,

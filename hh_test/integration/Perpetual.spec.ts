@@ -47,7 +47,11 @@ describe("Integration | Perpetual", function () {
 
   const assertAliceDebt = async (amount: BigNumber) => {
     expect(
-      (await stack.debtSystem.GetUserDebtBalanceInUsd(alice.address))[0]
+      (
+        await stack.collaterals.ath.debtSystem.GetUserDebtBalanceInUsd(
+          alice.address
+        )
+      )[0]
     ).to.equal(amount);
   };
 
@@ -103,15 +107,15 @@ describe("Integration | Perpetual", function () {
     );
 
     // Mint 1,000,000 ATH to Alice
-    await stack.athToken
+    await stack.collaterals.ath.token
       .connect(deployer)
       .transfer(alice.address, expandTo18Decimals(1_000_000));
 
     // Alice stakes all ATH and builds 10,000 athUSD
-    await stack.athToken
+    await stack.collaterals.ath.token
       .connect(alice)
-      .approve(stack.collateralSystem.address, uint256Max);
-    await stack.collateralSystem.connect(alice).stakeAndBuild(
+      .approve(stack.collaterals.ath.collateralSystem.address, uint256Max);
+    await stack.collaterals.ath.collateralSystem.connect(alice).stakeAndBuild(
       formatBytes32String("ATH"), // stakeCurrnecy
       expandTo18Decimals(1_000_000), // stakeAmount
       expandTo18Decimals(10_000) // buildAmount
