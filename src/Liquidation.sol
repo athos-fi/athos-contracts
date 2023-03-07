@@ -11,6 +11,7 @@ import "./interfaces/IDebtSystem.sol";
 import "./interfaces/IOracleRouter.sol";
 import "./interfaces/IRewardLocker.sol";
 import "./libraries/SafeDecimalMath.sol";
+import "./utilities/ConfigHelper.sol";
 
 contract Liquidation is OwnableUpgradeable {
     using SafeDecimalMath for uint256;
@@ -90,12 +91,6 @@ contract Liquidation is OwnableUpgradeable {
 
     mapping(address => UndercollateralizationMark) public undercollateralizationMarks;
 
-    bytes32 public constant LIQUIDATION_MARKER_REWARD_KEY = "LiquidationMarkerReward";
-    bytes32 public constant LIQUIDATION_LIQUIDATOR_REWARD_KEY = "LiquidationLiquidatorReward";
-    bytes32 public constant LIQUIDATION_RATIO_KEY = "LiquidationRatio";
-    bytes32 public constant LIQUIDATION_DELAY_KEY = "LiquidationDelay";
-    bytes32 public constant BUILD_RATIO_KEY = "BuildRatio";
-
     function isPositionMarkedAsUndercollateralized(address user) public view returns (bool) {
         return undercollateralizationMarks[user].timestamp > 0;
     }
@@ -142,7 +137,8 @@ contract Liquidation is OwnableUpgradeable {
         require(!isPositionMarkedAsUndercollateralized(user), "Liquidation: already marked");
 
         EvalUserPositionResult memory evalResult = evalUserPostion(user);
-        uint256 liquidationRatio = config.getUint(LIQUIDATION_RATIO_KEY);
+        uint256 liquidationRatio =
+            config.getUint(ConfigHelper.getLiquidationRatioKey(collateralSystem.collateralCurrency()));
         require(evalResult.collateralizationRatio > liquidationRatio, "Liquidation: not undercollateralized");
 
         undercollateralizationMarks[user] =
@@ -156,7 +152,7 @@ contract Liquidation is OwnableUpgradeable {
 
         // Can only remove mark if C ratio is restored to issuance ratio
         EvalUserPositionResult memory evalResult = evalUserPostion(user);
-        uint256 issuanceRatio = config.getUint(BUILD_RATIO_KEY);
+        uint256 issuanceRatio = config.getUint(ConfigHelper.getBuildRatioKey(collateralSystem.collateralCurrency()));
         require(evalResult.collateralizationRatio <= issuanceRatio, "Liquidation: still undercollateralized");
 
         delete undercollateralizationMarks[user];
@@ -180,7 +176,8 @@ contract Liquidation is OwnableUpgradeable {
         // Check mark and delay
         UndercollateralizationMark memory mark = undercollateralizationMarks[params.user];
         {
-            uint256 liquidationDelay = config.getUint(LIQUIDATION_DELAY_KEY);
+            uint256 liquidationDelay =
+                config.getUint(ConfigHelper.getLiquidationDelayKey(collateralSystem.collateralCurrency()));
             require(mark.timestamp > 0, "Liquidation: not marked for undercollateralized");
             require(block.timestamp > mark.timestamp + liquidationDelay, "Liquidation: liquidation delay not passed");
         }
@@ -299,9 +296,12 @@ contract Liquidation is OwnableUpgradeable {
     }
 
     function fetchRatios() private view returns (FetchRatiosResult memory) {
-        uint256 issuanceRatio = config.getUint(BUILD_RATIO_KEY);
-        uint256 markerRewardRatio = config.getUint(LIQUIDATION_MARKER_REWARD_KEY);
-        uint256 liquidatorRewardRatio = config.getUint(LIQUIDATION_LIQUIDATOR_REWARD_KEY);
+        bytes32 collateralCurrency = collateralSystem.collateralCurrency();
+
+        uint256 issuanceRatio = config.getUint(ConfigHelper.getBuildRatioKey(collateralCurrency));
+        uint256 markerRewardRatio = config.getUint(ConfigHelper.getLiquidationMarkerRewardKey(collateralCurrency));
+        uint256 liquidatorRewardRatio =
+            config.getUint(ConfigHelper.getLiquidationLiquidatorRewardKey(collateralCurrency));
 
         return FetchRatiosResult({
             issuanceRatio: issuanceRatio,

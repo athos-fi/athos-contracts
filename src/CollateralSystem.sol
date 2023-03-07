@@ -13,6 +13,7 @@ import "./interfaces/IDebtSystem.sol";
 import "./interfaces/IOracleRouter.sol";
 import "./interfaces/IRewardLocker.sol";
 import "./libraries/SafeDecimalMath.sol";
+import "./utilities/ConfigHelper.sol";
 import "./utilities/TransferHelper.sol";
 
 // Note to code reader by Tommy as of 2023-03-07:
@@ -87,7 +88,6 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
 
     bytes32 public constant NATIVE_CURRENCY = "ATH";
     uint8 public constant NATIVE_CURRENCY_DECIMALS = 18;
-    bytes32 public constant CONFIG_BUILD_RATIO = "BuildRatio";
 
     modifier onlyLiquidation() {
         require(msg.sender == liquidation, "CollateralSystem: not liquidation");
@@ -117,7 +117,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
             return totalCollateralInUsd;
         }
 
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+        uint256 buildRatio = mConfig.getUint(ConfigHelper.getBuildRatioKey(collateralCurrency()));
         uint256 minCollateral = debtBalance.divideDecimal(buildRatio);
         if (totalCollateralInUsd < minCollateral) {
             return 0;
@@ -392,7 +392,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
             return true;
         }
 
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+        uint256 buildRatio = mConfig.getUint(ConfigHelper.getBuildRatioKey(collateralCurrency()));
         uint256 totalCollateralInUsd = _getUserTotalCollateralInUsd(_user);
         if (totalCollateralInUsd == 0) {
             return false;
@@ -424,7 +424,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
             return stakedLinaAmount;
         } else {
             // User has debt. Must keep a certain amount
-            uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+            uint256 buildRatio = mConfig.getUint(ConfigHelper.getBuildRatioKey(_collateralCurrency));
             uint256 minCollateralUsd = debtBalance.divideDecimal(buildRatio);
             uint256 minCollateralLina =
                 minCollateralUsd.divideDecimalWith(priceGetter.getPrice(_collateralCurrency), collateralDecimals());

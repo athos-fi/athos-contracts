@@ -11,6 +11,7 @@ import "./interfaces/IConfig.sol";
 import "./interfaces/IDebtSystem.sol";
 import "./interfaces/IOracleRouter.sol";
 import "./libraries/SafeDecimalMath.sol";
+import "./utilities/ConfigHelper.sol";
 
 contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
@@ -23,8 +24,6 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     ICollateralSystem public collaterSys;
     IConfig public mConfig;
     address public liquidation;
-
-    bytes32 public constant CONFIG_BUILD_RATIO = "BuildRatio";
 
     modifier onlyCollaterSys() {
         require(msg.sender == address(collaterSys), "BuildBurnSystem: not collateral system");
@@ -80,7 +79,7 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     }
 
     function MaxCanBuildAsset(address user) public view returns (uint256) {
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+        uint256 buildRatio = mConfig.getUint(ConfigHelper.getBuildRatioKey(collaterSys.collateralCurrency()));
         uint256 maxCanBuild = collaterSys.getFreeCollateralInUsd(user).mul(buildRatio).div(SafeDecimalMath.unit());
         return maxCanBuild;
     }
@@ -92,7 +91,7 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     }
 
     function _buildAsset(address user, uint256 amount) internal returns (bool) {
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+        uint256 buildRatio = mConfig.getUint(ConfigHelper.getBuildRatioKey(collaterSys.collateralCurrency()));
         uint256 maxCanBuild = collaterSys.getFreeCollateralInUsd(user).multiplyDecimal(buildRatio);
         require(amount <= maxCanBuild, "Build amount too big, you need more collateral");
 
@@ -165,7 +164,7 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     function BurnAssetToTarget() external whenNotPaused returns (bool) {
         address user = msg.sender;
 
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+        uint256 buildRatio = mConfig.getUint(ConfigHelper.getBuildRatioKey(collaterSys.collateralCurrency()));
         uint256 totalCollateral = collaterSys.GetUserTotalCollateralInUsd(user);
         uint256 maxBuildAssetToTarget = totalCollateral.multiplyDecimal(buildRatio);
         (uint256 debtAsset,) = debtSystem.GetUserDebtBalanceInUsd(user);
