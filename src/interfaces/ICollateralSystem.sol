@@ -8,8 +8,6 @@ interface ICollateralSystem {
 
     function GetUserTotalCollateralInUsd(address _user) external view returns (uint256 rTotal);
 
-    function MaxRedeemableInUsd(address _user) external view returns (uint256);
-
     function getFreeCollateralInUsd(address user) external view returns (uint256);
 
     function moveCollateral(address fromUser, address toUser, bytes32 currency, uint256 amount) external;

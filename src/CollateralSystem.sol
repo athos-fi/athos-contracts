@@ -3,10 +3,9 @@ pragma solidity =0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "./interfaces/IBuildBurnSystem.sol";
 import "./interfaces/ICollateralSystem.sol";
 import "./interfaces/IConfig.sol";
@@ -16,45 +15,78 @@ import "./interfaces/IRewardLocker.sol";
 import "./libraries/SafeDecimalMath.sol";
 import "./utilities/TransferHelper.sol";
 
+// Note to code reader by Tommy as of 2023-03-07:
+//
+// This contract has been mostly rewritten after it's been deployed in production to properly
+// support multi-collateral, with backward compatibility as a hard requirement.
+//
+// The original codebase assumed that all collateral types will be aggregated into a single USD
+// amount, which is now (at the time of rewrite) considered impractical, as different collaterals
+// have different risk characteristics. The new design is to have each `CollateralSystem` contract
+// handle only a single collateral token.
+//
+// As such, the will be seemingly weird implementations across the contract that might make you
+// wonder why it's even coded that way. Most likely it's for backward compatibility with the
+// previous implementation. For more details check Git history.
 contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgradeable {
     using SafeDecimalMath for uint256;
     using SafeMathUpgradeable for uint256;
     using AddressUpgradeable for address;
 
-    // -------------------------------------------------------
-    // need set before system running value.
+    event UpdateTokenSetting(bytes32 symbol, address tokenAddr, uint256 minCollateral, bool close);
+    event CollateralLog(address user, bytes32 _currency, uint256 _amount, uint256 _userTotal);
+    event RedeemCollateral(address user, bytes32 _currency, uint256 _amount, uint256 _userTotal);
+    event CollateralMoved(address fromUser, address toUser, bytes32 currency, uint256 amount);
+    event CollateralUnlockReward(address user, bytes32 _currency, uint256 _amount, uint256 _userTotal);
+
+    struct TokenInfo {
+        address tokenAddr;
+        uint256 minCollateral;
+        uint256 totalCollateral;
+        bool disabled;
+    }
+
+    struct CollateralData {
+        uint256 collateral;
+    }
+
     IOracleRouter public priceGetter;
     IDebtSystem public debtSystem;
     IConfig public mConfig;
     IRewardLocker public mRewardLocker;
 
-    bytes32 public constant Currency_ETH = "ETH";
-    bytes32 public constant Currency_LINA = "ATH";
+    // This storage slot was previously occupied but not used. The multi-collateral rewrite takes
+    // advantage of it to use it for storing the collateral currency this contract instance deals
+    // with. However, for the already deployed instance (for the native currency), this field will
+    // remain zero. That's why there's a `collateralCurrency` function to determine the actual
+    // currency used.
+    //
+    // This field is made private on purpose to prevent misuse. Callers should use the function
+    // above instead.
+    bytes32 private nonNativeCollateralCurrency;
 
-    // -------------------------------------------------------
-    uint256 public uniqueId; // use log
-
-    struct TokenInfo {
-        address tokenAddr;
-        uint256 minCollateral; // min collateral amount.
-        uint256 totalCollateral;
-        bool bClose;
-    }
-
+    // We're only dealing with one token, but still using mapping to maintain backward-
+    // compatibility.
     mapping(bytes32 => TokenInfo) public tokenInfos;
-    bytes32[] public tokenSymbol; // keys of tokenInfos, use to iteration
 
-    struct CollateralData {
-        uint256 collateral; // total collateral
-    }
+    // This is a storage slot that used to be called `tokenSymbol` for storing all configured
+    // collateral tokens. The slot is kept to not break storage structure but it's no longer needed
+    // for the contract.
+    bytes32[] private DEPRECATED_DO_NOT_USE;
 
-    // [user] => ([token=> collateraldata])
+    // We're only dealing with one token, but still using nested mapping to maintain backward-
+    // compatibility.
+    //
+    // [user] => ([collateralToken] => [CollateralData])
     mapping(address => mapping(bytes32 => CollateralData)) public userCollateralData;
 
-    // State variables added by upgrades
     IBuildBurnSystem public buildBurnSystem;
     address public liquidation;
 
+    uint8 private nonNativeCollateralDecimals;
+
+    bytes32 public constant NATIVE_CURRENCY = "ATH";
+    uint8 public constant NATIVE_CURRENCY_DECIMALS = 18;
     bytes32 public constant CONFIG_BUILD_RATIO = "BuildRatio";
 
     modifier onlyLiquidation() {
@@ -67,17 +99,18 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         _;
     }
 
-    /**
-     * @notice This function is deprecated as it doesn't do what its name suggests. Use
-     * `getFreeCollateralInUsd()` instead. This function is not removed since it's still
-     * used by `LnBuildBurnSystem`.
-     */
-    function MaxRedeemableInUsd(address _user) public view returns (uint256) {
-        return getFreeCollateralInUsd(_user);
+    // See notes on `nonNativeCollateralCurrency`.
+    function collateralCurrency() public view returns (bytes32) {
+        return uint256(nonNativeCollateralCurrency) == 0 ? NATIVE_CURRENCY : nonNativeCollateralCurrency;
     }
 
-    function getFreeCollateralInUsd(address user) public view returns (uint256) {
-        uint256 totalCollateralInUsd = GetUserTotalCollateralInUsd(user);
+    // See notes on `nonNativeCollateralDecimals`.
+    function collateralDecimals() public view returns (uint8) {
+        return uint256(nonNativeCollateralCurrency) == 0 ? NATIVE_CURRENCY_DECIMALS : nonNativeCollateralDecimals;
+    }
+
+    function getFreeCollateralInUsd(address user) external view returns (uint256) {
+        uint256 totalCollateralInUsd = _getUserTotalCollateralInUsd(user);
 
         (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsd(user);
         if (debtBalance == 0) {
@@ -93,25 +126,60 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         return totalCollateralInUsd.sub(minCollateral);
     }
 
-    function maxRedeemableLina(address user) public view returns (uint256) {
-        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsd(user);
-        uint256 stakedLinaAmount = userCollateralData[user][Currency_LINA].collateral;
-
-        if (debtBalance == 0) {
-            // User doesn't have debt. All staked collateral is withdrawable
-            return stakedLinaAmount;
-        } else {
-            // User has debt. Must keep a certain amount
-            uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
-            uint256 minCollateralUsd = debtBalance.divideDecimal(buildRatio);
-            uint256 minCollateralLina = minCollateralUsd.divideDecimal(priceGetter.getPrice(Currency_LINA));
-            uint256 lockedLinaAmount = mRewardLocker.balanceOf(user);
-
-            return MathUpgradeable.min(stakedLinaAmount, stakedLinaAmount.add(lockedLinaAmount).sub(minCollateralLina));
-        }
+    // Despite the name, this function actually always returns the redeemable amount of the
+    // collateral managed by this contract instance, instead of the native currency.
+    function maxRedeemableLina(address user) external view returns (uint256) {
+        return _maxRedeemableLina(user);
     }
 
-    // -------------------------------------------------------
+    function GetSystemTotalCollateralInUsd() external view returns (uint256 rTotal) {
+        bytes32 _collateralCurrency = collateralCurrency();
+        uint256 collateralAmount = tokenInfos[_collateralCurrency].totalCollateral;
+        if (_collateralCurrency == NATIVE_CURRENCY) {
+            collateralAmount = collateralAmount.add(mRewardLocker.totalLockedAmount());
+        }
+
+        return collateralAmount.multiplyDecimalWith(priceGetter.getPrice(_collateralCurrency), collateralDecimals());
+    }
+
+    function GetUserTotalCollateralInUsd(address _user) external view returns (uint256 rTotal) {
+        return _getUserTotalCollateralInUsd(_user);
+    }
+
+    function GetUserCollateral(address _user, bytes32 _currency) external view returns (uint256) {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(_currency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
+        // Staked balance
+        uint256 collateralAmount = userCollateralData[_user][_currency].collateral;
+
+        // Locked balance
+        if (_currency == NATIVE_CURRENCY) {
+            collateralAmount += mRewardLocker.balanceOf(_user);
+        }
+
+        return collateralAmount;
+    }
+
+    // Despite the name, this function actually always returns the breakdown of the collateral
+    // managed by this contract instance, instead of the native currency.
+    function getUserLinaCollateralBreakdown(address _user) external view returns (uint256 staked, uint256 locked) {
+        bytes32 _collateralCurrency = collateralCurrency();
+
+        uint256 stakedBalance = userCollateralData[_user][_collateralCurrency].collateral;
+
+        uint256 lockedBalance = 0;
+        if (_collateralCurrency == NATIVE_CURRENCY) {
+            lockedBalance = mRewardLocker.balanceOf(_user);
+        }
+
+        return (stakedBalance, lockedBalance);
+    }
+
+    function IsSatisfyTargetRatio(address _user) external view returns (bool) {
+        return isSatisfyTargetRatio(_user);
+    }
+
     function __CollateralSystem_init(
         IOracleRouter _priceGetter,
         IDebtSystem _debtSystem,
@@ -119,7 +187,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         IRewardLocker _mRewardLocker,
         IBuildBurnSystem _buildBurnSystem,
         address _liquidation
-    ) public initializer {
+    ) external initializer {
         __Ownable_init();
 
         require(address(_priceGetter) != address(0), "CollateralSystem: zero address");
@@ -138,12 +206,12 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
     }
 
     function setLiquidationAddress(address newAddress) external onlyOwner {
-        require(newAddress != address(0), "BuildBurnSystem: zero address");
+        require(newAddress != address(0), "CollateralSystem: zero address");
         liquidation = newAddress;
     }
 
     function setRewardLockerAddress(IRewardLocker newAddress) external onlyOwner {
-        require(address(newAddress) != address(0), "BuildBurnSystem: zero address");
+        require(address(newAddress) != address(0), "CollateralSystem: zero address");
         mRewardLocker = newAddress;
     }
 
@@ -155,126 +223,50 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         }
     }
 
-    function updateTokenInfo(bytes32 _currency, address _tokenAddr, uint256 _minCollateral, bool _close)
-        private
-        returns (bool)
-    {
-        require(_currency[0] != 0, "symbol cannot empty");
-        require(_currency != Currency_ETH, "ETH is used by system");
-        require(_tokenAddr != address(0), "token address cannot zero");
-        require(_tokenAddr.isContract(), "token address is not a contract");
-
-        if (tokenInfos[_currency].tokenAddr == address(0)) {
-            // new token
-            tokenSymbol.push(_currency);
-        }
-
-        uint256 totalCollateral = tokenInfos[_currency].totalCollateral;
-        tokenInfos[_currency] = TokenInfo({
-            tokenAddr: _tokenAddr,
-            minCollateral: _minCollateral,
-            totalCollateral: totalCollateral,
-            bClose: _close
-        });
-        emit UpdateTokenSetting(_currency, _tokenAddr, _minCollateral, _close);
-        return true;
-    }
-
-    // delete token info? need to handle it's staking data.
-
-    function UpdateTokenInfo(bytes32 _currency, address _tokenAddr, uint256 _minCollateral, bool _close)
+    // The original function allowed overwriting token info. We kept the interface in the rewrite
+    // but changed to only allow calling it once.
+    function updateTokenInfo(bytes32 _currency, address _tokenAddr, uint256 _minCollateral, bool _disabled)
         external
         onlyOwner
-        returns (bool)
     {
-        return updateTokenInfo(_currency, _tokenAddr, _minCollateral, _close);
-    }
+        require(uint256(_currency) != 0, "CollateralSystem: empty symbol");
+        require(_tokenAddr != address(0), "CollateralSystem: zero address");
 
-    function UpdateTokenInfos(
-        bytes32[] calldata _symbols,
-        address[] calldata _tokenAddrs,
-        uint256[] calldata _minCollateral,
-        bool[] calldata _closes
-    ) external onlyOwner returns (bool) {
-        require(_symbols.length == _tokenAddrs.length, "length of array not eq");
-        require(_symbols.length == _minCollateral.length, "length of array not eq");
-        require(_symbols.length == _closes.length, "length of array not eq");
+        require(uint256(nonNativeCollateralCurrency) == 0, "CollateralSystem: token info already set");
+        require(tokenInfos[_currency].tokenAddr == address(0), "CollateralSystem: token info already set");
 
-        for (uint256 i = 0; i < _symbols.length; i++) {
-            updateTokenInfo(_symbols[i], _tokenAddrs[i], _minCollateral[i], _closes[i]);
+        // Here we retain the same behavior in local environments as the previously deployed native
+        // collateral instance.
+        if (_currency != NATIVE_CURRENCY) {
+            nonNativeCollateralCurrency = _currency;
+            nonNativeCollateralDecimals = IERC20MetadataUpgradeable(_tokenAddr).decimals();
         }
 
+        tokenInfos[_currency] =
+            TokenInfo({tokenAddr: _tokenAddr, minCollateral: _minCollateral, totalCollateral: 0, disabled: _disabled});
+        emit UpdateTokenSetting(_currency, _tokenAddr, _minCollateral, _disabled);
+    }
+
+    function Collateral(bytes32 _currency, uint256 _amount) external whenNotPaused returns (bool) {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(_currency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
+        return _collateral(msg.sender, _currency, _amount);
+    }
+
+    function Redeem(bytes32 _currency, uint256 _amount) external whenNotPaused returns (bool) {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(_currency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
+        _redeem(msg.sender, _currency, _amount);
         return true;
     }
 
-    // ------------------------------------------------------------------------
-    function GetSystemTotalCollateralInUsd() public view returns (uint256 rTotal) {
-        for (uint256 i = 0; i < tokenSymbol.length; i++) {
-            bytes32 currency = tokenSymbol[i];
-            uint256 collateralAmount = tokenInfos[currency].totalCollateral;
-            if (Currency_LINA == currency) {
-                collateralAmount = collateralAmount.add(mRewardLocker.totalLockedAmount());
-            }
-            if (collateralAmount > 0) {
-                rTotal = rTotal.add(collateralAmount.multiplyDecimal(priceGetter.getPrice(currency)));
-            }
-        }
+    function RedeemMax(bytes32 _currency) external whenNotPaused {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(_currency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
 
-        if (address(this).balance > 0) {
-            rTotal = rTotal.add(address(this).balance.multiplyDecimal(priceGetter.getPrice(Currency_ETH)));
-        }
-    }
-
-    function GetUserTotalCollateralInUsd(address _user) public view returns (uint256 rTotal) {
-        for (uint256 i = 0; i < tokenSymbol.length; i++) {
-            bytes32 currency = tokenSymbol[i];
-            uint256 collateralAmount = userCollateralData[_user][currency].collateral;
-            if (Currency_LINA == currency) {
-                collateralAmount = collateralAmount.add(mRewardLocker.balanceOf(_user));
-            }
-            if (collateralAmount > 0) {
-                rTotal = rTotal.add(collateralAmount.multiplyDecimal(priceGetter.getPrice(currency)));
-            }
-        }
-
-        if (userCollateralData[_user][Currency_ETH].collateral > 0) {
-            rTotal = rTotal.add(
-                userCollateralData[_user][Currency_ETH].collateral.multiplyDecimal(priceGetter.getPrice(Currency_ETH))
-            );
-        }
-    }
-
-    function GetUserCollateral(address _user, bytes32 _currency) external view returns (uint256) {
-        if (Currency_LINA != _currency) {
-            return userCollateralData[_user][_currency].collateral;
-        }
-        return mRewardLocker.balanceOf(_user).add(userCollateralData[_user][_currency].collateral);
-    }
-
-    function getUserLinaCollateralBreakdown(address _user) external view returns (uint256 staked, uint256 locked) {
-        return (userCollateralData[_user][Currency_LINA].collateral, mRewardLocker.balanceOf(_user));
-    }
-
-    // NOTE: LINA collateral not include reward in locker
-    function GetUserCollaterals(address _user) external view returns (bytes32[] memory, uint256[] memory) {
-        bytes32[] memory rCurrency = new bytes32[](tokenSymbol.length + 1);
-        uint256[] memory rAmount = new uint256[](tokenSymbol.length + 1);
-        uint256 retSize = 0;
-        for (uint256 i = 0; i < tokenSymbol.length; i++) {
-            bytes32 currency = tokenSymbol[i];
-            if (userCollateralData[_user][currency].collateral > 0) {
-                rCurrency[retSize] = currency;
-                rAmount[retSize] = userCollateralData[_user][currency].collateral;
-                retSize++;
-            }
-        }
-        if (userCollateralData[_user][Currency_ETH].collateral > 0) {
-            rCurrency[retSize] = Currency_ETH;
-            rAmount[retSize] = userCollateralData[_user][Currency_ETH].collateral;
-            retSize++;
-        }
-
-        return (rCurrency, rAmount);
+        _redeemMax(msg.sender, _currency);
     }
 
     /**
@@ -286,6 +278,9 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
      * @param buildAmount Amount of lUSD to build, can be zero
      */
     function stakeAndBuild(bytes32 stakeCurrency, uint256 stakeAmount, uint256 buildAmount) external whenNotPaused {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(stakeCurrency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
         require(stakeAmount > 0 || buildAmount > 0, "CollateralSystem: zero amount");
 
         if (stakeAmount > 0) {
@@ -304,6 +299,9 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
      * @param stakeAmount Amount of collateral currency to stake
      */
     function stakeAndBuildMax(bytes32 stakeCurrency, uint256 stakeAmount) external whenNotPaused {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(stakeCurrency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
         require(stakeAmount > 0, "CollateralSystem: zero amount");
 
         _collateral(msg.sender, stakeCurrency, stakeAmount);
@@ -322,6 +320,9 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         external
         whenNotPaused
     {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(unstakeCurrency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
         require(burnAmount > 0 || unstakeAmount > 0, "CollateralSystem: zero amount");
 
         if (burnAmount > 0) {
@@ -329,7 +330,7 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         }
 
         if (unstakeAmount > 0) {
-            _Redeem(msg.sender, unstakeCurrency, unstakeAmount);
+            _redeem(msg.sender, unstakeCurrency, unstakeAmount);
         }
     }
 
@@ -340,85 +341,13 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
      * @param unstakeCurrency ID of the collateral currency
      */
     function burnAndUnstakeMax(uint256 burnAmount, bytes32 unstakeCurrency) external whenNotPaused {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(unstakeCurrency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
         require(burnAmount > 0, "CollateralSystem: zero amount");
 
         buildBurnSystem.burnFromCollateralSys(msg.sender, burnAmount);
         _redeemMax(msg.sender, unstakeCurrency);
-    }
-
-    // need approve
-    function Collateral(bytes32 _currency, uint256 _amount) external whenNotPaused returns (bool) {
-        address user = msg.sender;
-        return _collateral(user, _currency, _amount);
-    }
-
-    function _collateral(address user, bytes32 _currency, uint256 _amount) private whenNotPaused returns (bool) {
-        require(tokenInfos[_currency].tokenAddr.isContract(), "Invalid token symbol");
-        TokenInfo storage tokeninfo = tokenInfos[_currency];
-        require(_amount > tokeninfo.minCollateral, "Collateral amount too small");
-        require(tokeninfo.bClose == false, "This token is closed");
-
-        IERC20Upgradeable erc20 = IERC20Upgradeable(tokenInfos[_currency].tokenAddr);
-        require(erc20.balanceOf(user) >= _amount, "insufficient balance");
-        require(erc20.allowance(user, address(this)) >= _amount, "insufficient allowance, need approve more amount");
-
-        erc20.transferFrom(user, address(this), _amount);
-
-        userCollateralData[user][_currency].collateral = userCollateralData[user][_currency].collateral.add(_amount);
-        tokeninfo.totalCollateral = tokeninfo.totalCollateral.add(_amount);
-
-        emit CollateralLog(user, _currency, _amount, userCollateralData[user][_currency].collateral);
-        return true;
-    }
-
-    function IsSatisfyTargetRatio(address _user) public view returns (bool) {
-        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsd(_user);
-        if (debtBalance == 0) {
-            return true;
-        }
-
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
-        uint256 totalCollateralInUsd = GetUserTotalCollateralInUsd(_user);
-        if (totalCollateralInUsd == 0) {
-            return false;
-        }
-        uint256 myratio = debtBalance.divideDecimal(totalCollateralInUsd);
-        return myratio <= buildRatio;
-    }
-
-    function RedeemMax(bytes32 _currency) external whenNotPaused {
-        _redeemMax(msg.sender, _currency);
-    }
-
-    function _redeemMax(address user, bytes32 _currency) private {
-        require(_currency == Currency_LINA, "CollateralSystem: only ATH is supported");
-        _Redeem(user, Currency_LINA, maxRedeemableLina(user));
-    }
-
-    function _Redeem(address user, bytes32 _currency, uint256 _amount) internal {
-        require(_currency == Currency_LINA, "CollateralSystem: only ATH is supported");
-        require(_amount > 0, "CollateralSystem: zero amount");
-
-        uint256 maxRedeemableLinaAmount = maxRedeemableLina(user);
-        require(_amount <= maxRedeemableLinaAmount, "CollateralSystem: insufficient collateral");
-
-        userCollateralData[user][Currency_LINA].collateral =
-            userCollateralData[user][Currency_LINA].collateral.sub(_amount);
-
-        TokenInfo storage tokeninfo = tokenInfos[Currency_LINA];
-        tokeninfo.totalCollateral = tokeninfo.totalCollateral.sub(_amount);
-
-        IERC20Upgradeable(tokeninfo.tokenAddr).transfer(user, _amount);
-
-        emit RedeemCollateral(user, Currency_LINA, _amount, userCollateralData[user][Currency_LINA].collateral);
-    }
-
-    // 1. After redeem, collateral ratio need bigger than target ratio.
-    // 2. Cannot redeem more than collateral.
-    function Redeem(bytes32 _currency, uint256 _amount) external whenNotPaused returns (bool) {
-        address user = msg.sender;
-        _Redeem(user, _currency, _amount);
-        return true;
     }
 
     function moveCollateral(address fromUser, address toUser, bytes32 currency, uint256 amount)
@@ -426,6 +355,9 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         whenNotPaused
         onlyLiquidation
     {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(currency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
         userCollateralData[fromUser][currency].collateral =
             userCollateralData[fromUser][currency].collateral.sub(amount);
         userCollateralData[toUser][currency].collateral = userCollateralData[toUser][currency].collateral.add(amount);
@@ -437,6 +369,9 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         whenNotPaused
         onlyRewardLocker
     {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(currency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
         require(user != address(0), "CollateralSystem: User address cannot be zero");
         require(amount > 0, "CollateralSystem: Collateral amount must be > 0");
 
@@ -451,9 +386,98 @@ contract CollateralSystem is ICollateralSystem, PausableUpgradeable, OwnableUpgr
         emit CollateralUnlockReward(user, currency, amount, userCollateralData[user][currency].collateral);
     }
 
-    event UpdateTokenSetting(bytes32 symbol, address tokenAddr, uint256 minCollateral, bool close);
-    event CollateralLog(address user, bytes32 _currency, uint256 _amount, uint256 _userTotal);
-    event RedeemCollateral(address user, bytes32 _currency, uint256 _amount, uint256 _userTotal);
-    event CollateralMoved(address fromUser, address toUser, bytes32 currency, uint256 amount);
-    event CollateralUnlockReward(address user, bytes32 _currency, uint256 _amount, uint256 _userTotal);
+    function isSatisfyTargetRatio(address _user) private view returns (bool) {
+        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsd(_user);
+        if (debtBalance == 0) {
+            return true;
+        }
+
+        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+        uint256 totalCollateralInUsd = _getUserTotalCollateralInUsd(_user);
+        if (totalCollateralInUsd == 0) {
+            return false;
+        }
+        uint256 myratio = debtBalance.divideDecimal(totalCollateralInUsd);
+        return myratio <= buildRatio;
+    }
+
+    function _getUserTotalCollateralInUsd(address _user) private view returns (uint256 rTotal) {
+        bytes32 _collateralCurrency = collateralCurrency();
+        uint256 collateralAmount = userCollateralData[_user][_collateralCurrency].collateral;
+        if (_collateralCurrency == NATIVE_CURRENCY) {
+            collateralAmount = collateralAmount.add(mRewardLocker.balanceOf(_user));
+        }
+
+        return collateralAmount.multiplyDecimalWith(priceGetter.getPrice(_collateralCurrency), collateralDecimals());
+    }
+
+    // Despite the name, this function actually always returns the redeemable amount of the
+    // collateral managed by this contract instance, instead of the native currency.
+    function _maxRedeemableLina(address user) private view returns (uint256) {
+        bytes32 _collateralCurrency = collateralCurrency();
+
+        (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsd(user);
+        uint256 stakedLinaAmount = userCollateralData[user][_collateralCurrency].collateral;
+
+        if (debtBalance == 0) {
+            // User doesn't have debt. All staked collateral is withdrawable
+            return stakedLinaAmount;
+        } else {
+            // User has debt. Must keep a certain amount
+            uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+            uint256 minCollateralUsd = debtBalance.divideDecimal(buildRatio);
+            uint256 minCollateralLina =
+                minCollateralUsd.divideDecimalWith(priceGetter.getPrice(_collateralCurrency), collateralDecimals());
+
+            uint256 lockedLinaAmount = 0;
+            if (_collateralCurrency == NATIVE_CURRENCY) {
+                lockedLinaAmount = mRewardLocker.balanceOf(user);
+            }
+
+            return MathUpgradeable.min(stakedLinaAmount, stakedLinaAmount.add(lockedLinaAmount).sub(minCollateralLina));
+        }
+    }
+
+    function _collateral(address user, bytes32 _currency, uint256 _amount) private whenNotPaused returns (bool) {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(_currency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
+        TokenInfo storage tokeninfo = tokenInfos[_currency];
+        require(_amount >= tokeninfo.minCollateral, "CollateralSystem: collateral amount too small");
+        require(!tokeninfo.disabled, "CollateralSystem: collateral disabled");
+
+        TransferHelper.safeTransferFrom(tokenInfos[_currency].tokenAddr, user, address(this), _amount);
+
+        userCollateralData[user][_currency].collateral = userCollateralData[user][_currency].collateral.add(_amount);
+        tokeninfo.totalCollateral = tokeninfo.totalCollateral.add(_amount);
+
+        emit CollateralLog(user, _currency, _amount, userCollateralData[user][_currency].collateral);
+        return true;
+    }
+
+    function _redeemMax(address user, bytes32 _currency) private {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(_currency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
+        _redeem(user, _currency, _maxRedeemableLina(user));
+    }
+
+    function _redeem(address user, bytes32 _currency, uint256 _amount) private {
+        // We shouldn't even take this param. But still taking it for backward-compatibility.
+        require(_currency == collateralCurrency(), "CollateralSystem: currency symbol mismatch");
+
+        require(_amount > 0, "CollateralSystem: zero amount");
+
+        uint256 maxRedeemableLinaAmount = _maxRedeemableLina(user);
+        require(_amount <= maxRedeemableLinaAmount, "CollateralSystem: insufficient collateral");
+
+        userCollateralData[user][_currency].collateral = userCollateralData[user][_currency].collateral.sub(_amount);
+
+        TokenInfo storage tokeninfo = tokenInfos[_currency];
+        tokeninfo.totalCollateral = tokeninfo.totalCollateral.sub(_amount);
+
+        TransferHelper.safeTransfer(tokeninfo.tokenAddr, user, _amount);
+
+        emit RedeemCollateral(user, _currency, _amount, userCollateralData[user][_currency].collateral);
+    }
 }

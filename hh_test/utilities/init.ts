@@ -569,17 +569,17 @@ export const deployAthosStack = async (
   /**
    * Register ATH on `CollateralSystem`
    */
-  await athCollateralSystem.connect(deployer).UpdateTokenInfo(
+  await athCollateralSystem.connect(deployer).updateTokenInfo(
     formatBytes32String("ATH"), // _currency
     athToken.address, // _tokenAddr
     expandTo18Decimals(1), // _minCollateral
-    false // _close
+    false // _disabled
   );
-  await wbtcCollateralSystem.connect(deployer).UpdateTokenInfo(
+  await wbtcCollateralSystem.connect(deployer).updateTokenInfo(
     formatBytes32String("WBTC"), // _currency
     wbtcToken.address, // _tokenAddr
     0_00010000, // _minCollateral
-    false // _close
+    false // _disabled
   );
 
   /**

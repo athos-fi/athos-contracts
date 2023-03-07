@@ -81,7 +81,7 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
 
     function MaxCanBuildAsset(address user) public view returns (uint256) {
         uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
-        uint256 maxCanBuild = collaterSys.MaxRedeemableInUsd(user).mul(buildRatio).div(SafeDecimalMath.unit());
+        uint256 maxCanBuild = collaterSys.getFreeCollateralInUsd(user).mul(buildRatio).div(SafeDecimalMath.unit());
         return maxCanBuild;
     }
 
@@ -93,7 +93,7 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
 
     function _buildAsset(address user, uint256 amount) internal returns (bool) {
         uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
-        uint256 maxCanBuild = collaterSys.MaxRedeemableInUsd(user).multiplyDecimal(buildRatio);
+        uint256 maxCanBuild = collaterSys.getFreeCollateralInUsd(user).multiplyDecimal(buildRatio);
         require(amount <= maxCanBuild, "Build amount too big, you need more collateral");
 
         // calc debt
