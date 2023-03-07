@@ -4,6 +4,8 @@ pragma solidity >=0.6.12 <0.9.0;
 interface ICollateralSystem {
     function collateralCurrency() external view returns (bytes32);
 
+    function collateralDecimals() external view returns (uint8);
+
     function getUserLinaCollateralBreakdown(address _user) external view returns (uint256 staked, uint256 locked);
 
     function IsSatisfyTargetRatio(address _user) external view returns (bool);
