@@ -18,6 +18,7 @@ import {
   AthToken,
   CollateralSystem,
   Config,
+  DebtDistribution,
   DebtSystem,
   ExchangeSystem,
   IERC20,
@@ -45,6 +46,7 @@ export interface DeployedStack {
   abtcPerp: Perpetual;
   oracleRouter: OracleRouter;
   assetRegistry: AssetRegistry;
+  debtDistribution: DebtDistribution;
   rewardLocker: RewardLocker;
   rewardSystem: RewardSystem;
   exchangeSystem: ExchangeSystem;
@@ -89,6 +91,10 @@ export const deployAthosStack = async (
     deployer
   );
   const DebtSystem = await ethers.getContractFactory("DebtSystem", deployer);
+  const DebtDistribution = await ethers.getContractFactory(
+    "DebtDistribution",
+    deployer
+  );
   const BuildBurnSystem = await ethers.getContractFactory(
     "BuildBurnSystem",
     deployer
@@ -183,6 +189,16 @@ export const deployAthosStack = async (
       initializer: "__AssetRegistry_init",
     }
   )) as AssetRegistry;
+
+  const debtDistribution: DebtDistribution = (await upgrades.deployProxy(
+    DebtDistribution,
+    [
+      assetRegistry.address, // _assetRegistry
+    ],
+    {
+      initializer: "__DebtDistribution_init",
+    }
+  )) as DebtDistribution;
 
   const athDebtSystem: DebtSystem = (await upgrades.deployProxy(
     DebtSystem,
@@ -582,6 +598,20 @@ export const deployAthosStack = async (
     false // _disabled
   );
 
+  // Link `DebtSystem` instances to `DebtDistribution`
+  await debtDistribution
+    .connect(deployer)
+    .addCollateral(athDebtSystem.address, formatBytes32String("ATH"));
+  await athDebtSystem
+    .connect(deployer)
+    .setDebtDistribution(debtDistribution.address);
+  await debtDistribution
+    .connect(deployer)
+    .addCollateral(wbtcDebtSystem.address, formatBytes32String("WBTC"));
+  await wbtcDebtSystem
+    .connect(deployer)
+    .setDebtDistribution(debtDistribution.address);
+
   /**
    * Set up oracles
    */
@@ -627,6 +657,7 @@ export const deployAthosStack = async (
     abtcPerp: abtcPerp,
     oracleRouter: oracleRouter,
     assetRegistry: assetRegistry,
+    debtDistribution: debtDistribution,
     rewardLocker: rewardLocker,
     rewardSystem: rewardSystem,
     exchangeSystem: exchangeSystem,

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "./interfaces/IAssetRegistry.sol";
+import "./interfaces/IDebtDistribution.sol";
 import "./interfaces/IDebtSystem.sol";
 import "./libraries/SafeDecimalMath.sol";
 
@@ -70,6 +71,8 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
     // This mechanism enables efficient tracking of everyone's debt in O(1).
     uint256 public collateralDebtFactor;
 
+    IDebtDistribution public debtDistribution;
+
     bytes32 private constant ROLE_UPDATE_DEBT = "UPDATE_DEBT";
 
     modifier onlyUpdateDebtRole() {
@@ -78,7 +81,7 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
     }
 
     /**
-     * @return [0] the debt balance of user. [1] system total asset in usd.
+     * @return [0] the debt balance of user. [1] the debt balance for this collateral.
      */
     function GetUserDebtBalanceInUsd(address _user) external view returns (uint256, uint256) {
         return _getUserDebtBalanceInUsd(_user);
@@ -94,6 +97,11 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
         assetSys = _assetSys;
     }
 
+    function setDebtDistribution(IDebtDistribution _debtDistribution) external onlyOwner {
+        require(address(_debtDistribution) != address(0), "DebtSystem: zero address");
+        debtDistribution = _debtDistribution;
+    }
+
     function increaseDebt(address _user, uint256 _amount) external onlyUpdateDebtRole {
         _increaseDebt(_user, _amount);
     }
@@ -105,16 +113,19 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
     function _lastSystemDebtFactor() private view returns (uint256) {
         if (debtCurrentIndex == 0) {
             return SafeDecimalMath.preciseUnit();
+        } else {
+            uint256 latestFactor = lastDebtFactors[debtCurrentIndex - 1];
+            return latestFactor == 0 ? SafeDecimalMath.preciseUnit() : latestFactor;
         }
-        return lastDebtFactors[debtCurrentIndex - 1];
     }
 
     /**
-     * @return [0] the debt balance of user. [1] system total asset in usd.
+     * @return [0] the debt balance of user. [1] the debt balance for this collateral.
      */
     function _getUserDebtBalanceInUsd(address _user) private view returns (uint256, uint256) {
-        // TODO: adjust this value for this collateral
-        uint256 totalAssetSupplyInUsd = assetSys.totalAssetsInUsd();
+        require(address(debtDistribution) != address(0), "DebtSystem: DebtDistribution not set");
+
+        uint256 totalAssetSupplyInUsd = debtDistribution.getCollateralDebtBalanceByDebtSystemAddress(address(this));
 
         uint256 debtProportion = userDebtState[_user].debtProportion;
         uint256 debtFactor = userDebtState[_user].debtFactor;
@@ -133,6 +144,8 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
     }
 
     function _increaseDebt(address _user, uint256 _amount) private {
+        require(address(debtDistribution) != address(0), "DebtSystem: DebtDistribution not set");
+
         (uint256 oldUserDebtBalance, uint256 oldSystemDebtBalance) = _getUserDebtBalanceInUsd(_user);
 
         uint256 newUserDebtBalance = oldUserDebtBalance.add(_amount);
@@ -143,9 +156,13 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
         uint256 oldDebtProportion = SafeDecimalMath.preciseUnit().sub(amountProportion);
 
         _updateDebt(_user, newUserDebtProportion, oldDebtProportion);
+
+        debtDistribution.increaseDebt(_amount);
     }
 
     function _decreaseDebt(address _user, uint256 _amount) private {
+        require(address(debtDistribution) != address(0), "DebtSystem: DebtDistribution not set");
+
         (uint256 oldUserDebtBalance, uint256 oldSystemDebtBalance) = _getUserDebtBalanceInUsd(_user);
 
         uint256 newUserDebtBalance = oldUserDebtBalance.sub(_amount);
@@ -162,6 +179,8 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
         }
 
         _updateDebt(_user, newUserDebtProportion, oldDebtProportion);
+
+        debtDistribution.decreaseDebt(_amount);
     }
 
     function _updateDebt(address _user, uint256 _debtProportion, uint256 _factor) private {
