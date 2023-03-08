@@ -420,7 +420,7 @@ export const deployAthosStack = async (
     .mint(deployer.address, expandTo8Decimals(1_000_000));
 
   /**
-   * Set config items:
+   * Set config items for ATH collateral:
    *
    * - BuildRatio: 0.2
    * - LiquidationRatio: 0.5
@@ -448,6 +448,42 @@ export const deployAthosStack = async (
     {
       key: "LiquidationDelay",
       value: Duration.fromObject({ days: 3 }).as("seconds"),
+    },
+  ])
+    await config.connect(deployer).setUint(
+      ethers.utils.formatBytes32String(item.key), // key
+      item.value // value
+    );
+
+  /**
+   * Set config items for WBTC collateral:
+   *
+   * - BuildRatio: 0.5
+   * - LiquidationRatio: 0.5
+   * - LiquidationMarkerReward: 0.02
+   * - LiquidationLiquidatorReward: 0.05
+   * - LiquidationDelay: 1 day
+   */
+  for (const item of [
+    {
+      key: "WBTC_BuildRatio",
+      value: expandTo18Decimals(0.5),
+    },
+    {
+      key: "WBTC_LiqRatio",
+      value: expandTo18Decimals(0.5),
+    },
+    {
+      key: "WBTC_LiqMarkerReward",
+      value: expandTo18Decimals(0.02),
+    },
+    {
+      key: "WBTC_LiqLiquidatorReward",
+      value: expandTo18Decimals(0.05),
+    },
+    {
+      key: "WBTC_LiqDelay",
+      value: Duration.fromObject({ days: 1 }).as("seconds"),
     },
   ])
     await config.connect(deployer).setUint(
