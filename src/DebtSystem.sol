@@ -8,30 +8,67 @@ import "./interfaces/IAssetRegistry.sol";
 import "./interfaces/IDebtSystem.sol";
 import "./libraries/SafeDecimalMath.sol";
 
+// Note to code reader by Tommy as of 2023-03-07:
+//
+// This contract has been mostly rewritten after it's been deployed in production to properly
+// support multi-collateral, with backward compatibility as a hard requirement.
+//
+// The original codebase has a questionable design of storing the latest "debt factor" values in an
+// array whereas the only thing that's actually needed would be the latest value. It's meant to
+// have a mechanism for deleting old values but it never actually kicks in as the trigger condition
+// is never satisfied. This has caused a significant waste of gas for end users.
+//
+// To eventually move away from the questionable design, the multi-collateral upgrade changes to
+// _also_ persist the latest value to a single slot, but never to actually use it. Once we make
+// sure the on-chain value of this new slot syncs with the array value, we can make another upgrade
+// to stop writing to the array for good.
+//
+// As such, the will be seemingly weird implementations across the contract that might make you
+// wonder why it's even coded that way. Most likely it's for backward compatibility with the
+// previous implementation. For more details check Git history.
 contract DebtSystem is IDebtSystem, OwnableUpgradeable {
     using SafeDecimalMath for uint256;
     using SafeMathUpgradeable for uint256;
 
-    // -------------------------------------------------------
-    // need set before system running value.
+    event UpdateUserDebtLog(address addr, uint256 debtProportion, uint256 debtFactor, uint256 timestamp);
+    event PushDebtLog(uint256 index, uint256 newFactor, uint256 timestamp);
+
+    struct UserDebtData {
+        uint256 debtProportion;
+        uint256 debtFactor;
+    }
+
     IAccessControlUpgradeable public accessCtrl;
     IAssetRegistry public assetSys;
 
-    // -------------------------------------------------------
-    struct DebtData {
-        uint256 debtProportion;
-        uint256 debtFactor; // PRECISE_UNIT
-    }
+    mapping(address => UserDebtData) public userDebtState;
 
-    mapping(address => DebtData) public userDebtState;
+    // These two fields are the result of the original questionable design. See the rewrite note at
+    // the top for more details.
+    mapping(uint256 => uint256) public lastDebtFactors;
+    uint256 public debtCurrentIndex;
 
-    //use mapping to store array data
-    mapping(uint256 => uint256) public lastDebtFactors; // PRECISE_UNIT Note: 能直接记 factor 的记 factor, 不能记的就用index查
-    uint256 public debtCurrentIndex; // length of array. this index of array no value
-    // follow var use to manage array size.
-    uint256 public lastCloseAt; // close at array index
-    uint256 public lastDeletTo; // delete to array index, lastDeletTo < lastCloseAt
-    uint256 public constant MAX_DEL_PER_TIME = 50;
+    // There were originally two storage vars here: `lastCloseAt` and `lastDeletTo`, which were
+    // supposed to power the old storage data pruning mechanism. However, it turned out to be
+    // unused. We can safely remove them and repurpose the slots as they are and will stay zero.
+
+    // The global debt factor for this collateral managed by this contract instance.
+    //
+    // To understand this field, imagine the owner of the first ever debt entry under this
+    // collateral to have never performed any action after the initial mint.
+    //
+    // With this setup, this number represents the proportion of the that first ever debt with
+    // regard to the current debt pool. Natually, this number shrinks over time as other users
+    // would build up debt as well.
+    //
+    // Why is this useful? Well, at any point in time, when any user makes any changes to his/her
+    // debt, the current "global debt factor" can be recorded. At a later time, we can compare this
+    // previously marked down value with the actual lastest value to figure out how much the debt
+    // proportion of this specific user have changed. We can then derive the latest proportion of
+    // the user's debt with regard to the entire debt pool.
+    //
+    // This mechanism enables efficient tracking of everyone's debt in O(1).
+    uint256 public collateralDebtFactor;
 
     bytes32 private constant ROLE_UPDATE_DEBT = "UPDATE_DEBT";
 
@@ -40,89 +77,11 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
         _;
     }
 
-    function __DebtSystem_init(IAccessControlUpgradeable _accessCtrl, IAssetRegistry _assetSys) public initializer {
-        __Ownable_init();
-
-        require(address(_accessCtrl) != address(0), "DebtSystem: zero address");
-        require(address(_assetSys) != address(0), "DebtSystem: zero address");
-
-        accessCtrl = _accessCtrl;
-        assetSys = _assetSys;
-    }
-
-    event UpdateAddressStorage(address oldAddr, address newAddr);
-    event UpdateUserDebtLog(address addr, uint256 debtProportion, uint256 debtFactor, uint256 timestamp);
-    event PushDebtLog(uint256 index, uint256 newFactor, uint256 timestamp);
-
-    function _pushDebtFactor(uint256 _factor) private {
-        if (debtCurrentIndex == 0 || lastDebtFactors[debtCurrentIndex - 1] == 0) {
-            // init or all debt has be cleared, new set value will be one unit
-            lastDebtFactors[debtCurrentIndex] = SafeDecimalMath.preciseUnit();
-        } else {
-            lastDebtFactors[debtCurrentIndex] =
-                lastDebtFactors[debtCurrentIndex - 1].multiplyDecimalRoundPrecise(_factor);
-        }
-        emit PushDebtLog(debtCurrentIndex, lastDebtFactors[debtCurrentIndex], block.timestamp);
-
-        debtCurrentIndex = debtCurrentIndex.add(1);
-
-        // delete out of date data
-        if (lastDeletTo < lastCloseAt) {
-            // safe check
-            uint256 delNum = lastCloseAt - lastDeletTo;
-            delNum = delNum > MAX_DEL_PER_TIME ? MAX_DEL_PER_TIME : delNum; // not delete all in one call, for saving someone fee.
-            for (uint256 i = lastDeletTo; i < delNum; i++) {
-                delete lastDebtFactors[i];
-            }
-            lastDeletTo = lastDeletTo.add(delNum);
-        }
-    }
-
-    function _updateUserDebt(address _user, uint256 _debtProportion) private {
-        userDebtState[_user].debtProportion = _debtProportion;
-        userDebtState[_user].debtFactor = _lastSystemDebtFactor();
-        emit UpdateUserDebtLog(_user, _debtProportion, userDebtState[_user].debtFactor, block.timestamp);
-    }
-
-    function UpdateDebt(address _user, uint256 _debtProportion, uint256 _factor) external onlyUpdateDebtRole {
-        _pushDebtFactor(_factor);
-        _updateUserDebt(_user, _debtProportion);
-    }
-
-    function GetUserDebtData(address _user) external view returns (uint256 debtProportion, uint256 debtFactor) {
-        debtProportion = userDebtState[_user].debtProportion;
-        debtFactor = userDebtState[_user].debtFactor;
-    }
-
-    function _lastSystemDebtFactor() private view returns (uint256) {
-        if (debtCurrentIndex == 0) {
-            return SafeDecimalMath.preciseUnit();
-        }
-        return lastDebtFactors[debtCurrentIndex - 1];
-    }
-
-    function LastSystemDebtFactor() external view returns (uint256) {
-        return _lastSystemDebtFactor();
-    }
-
-    function GetUserCurrentDebtProportion(address _user) public view returns (uint256) {
-        uint256 debtProportion = userDebtState[_user].debtProportion;
-        uint256 debtFactor = userDebtState[_user].debtFactor;
-
-        if (debtProportion == 0) {
-            return 0;
-        }
-
-        uint256 currentUserDebtProportion =
-            _lastSystemDebtFactor().divideDecimalRoundPrecise(debtFactor).multiplyDecimalRoundPrecise(debtProportion);
-        return currentUserDebtProportion;
-    }
-
     /**
-     *
      * @return [0] the debt balance of user. [1] system total asset in usd.
      */
     function GetUserDebtBalanceInUsd(address _user) external view returns (uint256, uint256) {
+        // TODO: adjust this value for this collateral
         uint256 totalAssetSupplyInUsd = assetSys.totalAssetsInUsd();
 
         uint256 debtProportion = userDebtState[_user].debtProportion;
@@ -139,5 +98,53 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
         ).preciseDecimalToDecimal();
 
         return (userDebtBalance, totalAssetSupplyInUsd);
+    }
+
+    function __DebtSystem_init(IAccessControlUpgradeable _accessCtrl, IAssetRegistry _assetSys) external initializer {
+        __Ownable_init();
+
+        require(address(_accessCtrl) != address(0), "DebtSystem: zero address");
+        require(address(_assetSys) != address(0), "DebtSystem: zero address");
+
+        accessCtrl = _accessCtrl;
+        assetSys = _assetSys;
+    }
+
+    function UpdateDebt(address _user, uint256 _debtProportion, uint256 _factor) external onlyUpdateDebtRole {
+        _pushDebtFactor(_factor);
+        _updateUserDebt(_user, _debtProportion);
+    }
+
+    function _lastSystemDebtFactor() private view returns (uint256) {
+        if (debtCurrentIndex == 0) {
+            return SafeDecimalMath.preciseUnit();
+        }
+        return lastDebtFactors[debtCurrentIndex - 1];
+    }
+
+    function _pushDebtFactor(uint256 _factor) private {
+        // This is the old questionable logic. We're keeping it here until the next upgrade
+        {
+            if (debtCurrentIndex == 0 || lastDebtFactors[debtCurrentIndex - 1] == 0) {
+                // init or all debt has be cleared, new set value will be one unit
+                lastDebtFactors[debtCurrentIndex] = SafeDecimalMath.preciseUnit();
+            } else {
+                lastDebtFactors[debtCurrentIndex] =
+                    lastDebtFactors[debtCurrentIndex - 1].multiplyDecimalRoundPrecise(_factor);
+            }
+            emit PushDebtLog(debtCurrentIndex, lastDebtFactors[debtCurrentIndex], block.timestamp);
+
+            debtCurrentIndex = debtCurrentIndex.add(1);
+        }
+
+        // This new storage slot is what enables use to get rid of the legacy logic above in the
+        // next upgrade.
+        collateralDebtFactor = lastDebtFactors[debtCurrentIndex - 1];
+    }
+
+    function _updateUserDebt(address _user, uint256 _debtProportion) private {
+        userDebtState[_user].debtProportion = _debtProportion;
+        userDebtState[_user].debtFactor = _lastSystemDebtFactor();
+        emit UpdateUserDebtLog(_user, _debtProportion, userDebtState[_user].debtFactor, block.timestamp);
     }
 }
