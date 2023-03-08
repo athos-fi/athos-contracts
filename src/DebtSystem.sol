@@ -81,6 +81,38 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
      * @return [0] the debt balance of user. [1] system total asset in usd.
      */
     function GetUserDebtBalanceInUsd(address _user) external view returns (uint256, uint256) {
+        return _getUserDebtBalanceInUsd(_user);
+    }
+
+    function __DebtSystem_init(IAccessControlUpgradeable _accessCtrl, IAssetRegistry _assetSys) external initializer {
+        __Ownable_init();
+
+        require(address(_accessCtrl) != address(0), "DebtSystem: zero address");
+        require(address(_assetSys) != address(0), "DebtSystem: zero address");
+
+        accessCtrl = _accessCtrl;
+        assetSys = _assetSys;
+    }
+
+    function increaseDebt(address _user, uint256 _amount) external onlyUpdateDebtRole {
+        _increaseDebt(_user, _amount);
+    }
+
+    function decreaseDebt(address _user, uint256 _amount) external onlyUpdateDebtRole {
+        _decreaseDebt(_user, _amount);
+    }
+
+    function _lastSystemDebtFactor() private view returns (uint256) {
+        if (debtCurrentIndex == 0) {
+            return SafeDecimalMath.preciseUnit();
+        }
+        return lastDebtFactors[debtCurrentIndex - 1];
+    }
+
+    /**
+     * @return [0] the debt balance of user. [1] system total asset in usd.
+     */
+    function _getUserDebtBalanceInUsd(address _user) private view returns (uint256, uint256) {
         // TODO: adjust this value for this collateral
         uint256 totalAssetSupplyInUsd = assetSys.totalAssetsInUsd();
 
@@ -100,29 +132,39 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
         return (userDebtBalance, totalAssetSupplyInUsd);
     }
 
-    function __DebtSystem_init(IAccessControlUpgradeable _accessCtrl, IAssetRegistry _assetSys) external initializer {
-        __Ownable_init();
+    function _increaseDebt(address _user, uint256 _amount) private {
+        (uint256 oldUserDebtBalance, uint256 oldSystemDebtBalance) = _getUserDebtBalanceInUsd(_user);
 
-        require(address(_accessCtrl) != address(0), "DebtSystem: zero address");
-        require(address(_assetSys) != address(0), "DebtSystem: zero address");
+        uint256 newUserDebtBalance = oldUserDebtBalance.add(_amount);
+        uint256 newSystemDebtBalance = oldSystemDebtBalance.add(_amount);
+        uint256 amountProportion = _amount.divideDecimalRoundPrecise(newSystemDebtBalance);
 
-        accessCtrl = _accessCtrl;
-        assetSys = _assetSys;
+        uint256 newUserDebtProportion = newUserDebtBalance.divideDecimalRoundPrecise(newSystemDebtBalance);
+        uint256 oldDebtProportion = SafeDecimalMath.preciseUnit().sub(amountProportion);
+
+        _updateDebt(_user, newUserDebtProportion, oldDebtProportion);
     }
 
-    function UpdateDebt(address _user, uint256 _debtProportion, uint256 _factor) external onlyUpdateDebtRole {
-        _pushDebtFactor(_factor);
-        _updateUserDebt(_user, _debtProportion);
-    }
+    function _decreaseDebt(address _user, uint256 _amount) private {
+        (uint256 oldUserDebtBalance, uint256 oldSystemDebtBalance) = _getUserDebtBalanceInUsd(_user);
 
-    function _lastSystemDebtFactor() private view returns (uint256) {
-        if (debtCurrentIndex == 0) {
-            return SafeDecimalMath.preciseUnit();
+        uint256 newUserDebtBalance = oldUserDebtBalance.sub(_amount);
+        uint256 newSystemDebtBalance = oldSystemDebtBalance.sub(_amount);
+
+        uint256 newUserDebtProportion = newUserDebtBalance.divideDecimalRoundPrecise(newSystemDebtBalance);
+
+        uint256 oldDebtProportion;
+        if (newSystemDebtBalance > 0) {
+            uint256 amountProportion = _amount.divideDecimalRoundPrecise(newSystemDebtBalance);
+            oldDebtProportion = SafeDecimalMath.preciseUnit().add(amountProportion);
+        } else {
+            oldDebtProportion = 0;
         }
-        return lastDebtFactors[debtCurrentIndex - 1];
+
+        _updateDebt(_user, newUserDebtProportion, oldDebtProportion);
     }
 
-    function _pushDebtFactor(uint256 _factor) private {
+    function _updateDebt(address _user, uint256 _debtProportion, uint256 _factor) private {
         // This is the old questionable logic. We're keeping it here until the next upgrade
         {
             if (debtCurrentIndex == 0 || lastDebtFactors[debtCurrentIndex - 1] == 0) {
@@ -140,9 +182,7 @@ contract DebtSystem is IDebtSystem, OwnableUpgradeable {
         // This new storage slot is what enables use to get rid of the legacy logic above in the
         // next upgrade.
         collateralDebtFactor = lastDebtFactors[debtCurrentIndex - 1];
-    }
 
-    function _updateUserDebt(address _user, uint256 _debtProportion) private {
         userDebtState[_user].debtProportion = _debtProportion;
         userDebtState[_user].debtFactor = _lastSystemDebtFactor();
         emit UpdateUserDebtLog(_user, _debtProportion, userDebtState[_user].debtFactor, block.timestamp);

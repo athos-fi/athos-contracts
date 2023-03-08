@@ -95,20 +95,7 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
         uint256 maxCanBuild = collaterSys.getFreeCollateralInUsd(user).multiplyDecimal(buildRatio);
         require(amount <= maxCanBuild, "Build amount too big, you need more collateral");
 
-        // calc debt
-        (uint256 oldUserDebtBalance, uint256 totalAssetSupplyInUsd) = debtSystem.GetUserDebtBalanceInUsd(user);
-
-        uint256 newTotalAssetSupply = totalAssetSupplyInUsd.add(amount);
-        // update debt data
-        uint256 buildDebtProportion = amount.divideDecimalRoundPrecise(newTotalAssetSupply); // debtPercentage
-        uint256 oldTotalProportion = SafeDecimalMath.preciseUnit().sub(buildDebtProportion); //
-        uint256 newUserDebtProportion = buildDebtProportion;
-        if (oldUserDebtBalance > 0) {
-            newUserDebtProportion = oldUserDebtBalance.add(amount).divideDecimalRoundPrecise(newTotalAssetSupply);
-        }
-
-        // update debt
-        debtSystem.UpdateDebt(user, newUserDebtProportion, oldTotalProportion);
+        debtSystem.increaseDebt(user, amount);
 
         // mint asset
         lUSDToken.mint(user, amount);
@@ -126,31 +113,17 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     }
 
     function _burnAsset(address debtUser, address burnUser, uint256 amount) internal {
-        //uint256 buildRatio = mConfig.getUint(mConfig.BUILD_RATIO());
         require(amount > 0, "amount need > 0");
-        // calc debt
-        (uint256 oldUserDebtBalance, uint256 totalAssetSupplyInUsd) = debtSystem.GetUserDebtBalanceInUsd(debtUser);
+
+        (uint256 oldUserDebtBalance,) = debtSystem.GetUserDebtBalanceInUsd(debtUser);
         require(oldUserDebtBalance > 0, "no debt, no burn");
+
         uint256 burnAmount = oldUserDebtBalance < amount ? oldUserDebtBalance : amount;
+
+        debtSystem.decreaseDebt(debtUser, burnAmount);
+
         // burn asset
         lUSDToken.burn(burnUser, burnAmount);
-
-        uint256 newTotalDebtIssued = totalAssetSupplyInUsd.sub(burnAmount);
-
-        uint256 oldTotalProportion = 0;
-        if (newTotalDebtIssued > 0) {
-            uint256 debtPercentage = burnAmount.divideDecimalRoundPrecise(newTotalDebtIssued);
-            oldTotalProportion = SafeDecimalMath.preciseUnit().add(debtPercentage);
-        }
-
-        uint256 newUserDebtProportion = 0;
-        if (oldUserDebtBalance > burnAmount) {
-            uint256 newDebt = oldUserDebtBalance.sub(burnAmount);
-            newUserDebtProportion = newDebt.divideDecimalRoundPrecise(newTotalDebtIssued);
-        }
-
-        // update debt
-        debtSystem.UpdateDebt(debtUser, newUserDebtProportion, oldTotalProportion);
     }
 
     // burn
