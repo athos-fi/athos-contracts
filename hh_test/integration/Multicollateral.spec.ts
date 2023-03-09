@@ -25,9 +25,23 @@ enum CollateralType {
 }
 
 describe("Integration | Multicollateral", function () {
-  let deployer: SignerWithAddress, alice: SignerWithAddress;
+  let deployer: SignerWithAddress,
+    alice: SignerWithAddress,
+    bob: SignerWithAddress;
 
   let stack: DeployedStack;
+
+  const setAthPrice = async (price: number): Promise<void> => {
+    await stack.athOracle.connect(deployer).setPrice(
+      expandTo8Decimals(price) // price
+    );
+  };
+
+  const setWbtcPrice = async (price: number): Promise<void> => {
+    await stack.wbtcOracle.connect(deployer).setPrice(
+      expandTo8Decimals(price) // price
+    );
+  };
 
   const assertDebtBalance = async (
     user: string,
@@ -51,18 +65,14 @@ describe("Integration | Multicollateral", function () {
   };
 
   beforeEach(async function () {
-    [deployer, alice] = await ethers.getSigners();
+    [deployer, alice, bob] = await ethers.getSigners();
 
     stack = await deployAthosStack(deployer);
 
     // Set ATH price to $0.01
-    await stack.athOracle.connect(deployer).setPrice(
-      expandTo8Decimals(0.01) // price
-    );
+    await setAthPrice(0.01);
     // Set WBTC price to $20,000
-    await stack.wbtcOracle.connect(deployer).setPrice(
-      expandTo8Decimals(20_000) // price
-    );
+    await setWbtcPrice(20_000);
 
     // Mint 1,000,000 ATH and 10 WBTC to Alice
     await stack.collaterals.ath.token
@@ -430,6 +440,101 @@ describe("Integration | Multicollateral", function () {
         CollateralType.WBTC,
         expandTo18Decimals(10)
       );
+    });
+  });
+
+  describe("Liquidation", function () {
+    beforeEach(async function () {
+      // Set ATH price to $0.1 and WBTC price to $20,000
+      await setAthPrice(0.1);
+      await setWbtcPrice(20_000);
+
+      // Alice stakes 1,000 ATH and 1 WBTC
+      await stack.collaterals.ath.collateralSystem.connect(alice).Collateral(
+        formatBytes32String("ATH"), // _currency
+        expandTo18Decimals(1_000) // _amount
+      );
+      await stack.collaterals.wbtc.collateralSystem.connect(alice).Collateral(
+        formatBytes32String("WBTC"), // _currency
+        expandTo8Decimals(1) // _amount
+      );
+
+      // Alice builds 20 athUSD from ATH and 20 athUSD from WBTC
+      await stack.collaterals.ath.buildBurnSystem.connect(alice).BuildAsset(
+        expandTo18Decimals(20) // amount
+      );
+      await stack.collaterals.wbtc.buildBurnSystem.connect(alice).BuildAsset(
+        expandTo18Decimals(20) // amount
+      );
+    });
+
+    it("WBTC debt position can be marked for liquidation", async function () {
+      // Price of WBTC changes to $40 such that WBTC C-ratio becomes 200%
+      await setWbtcPrice(40);
+
+      // Can't mark Alice's position as it's not *below* liquidation ratio
+      await expect(
+        stack.collaterals.wbtc.liquidation
+          .connect(bob)
+          .markPositionAsUndercollateralized(alice.address)
+      ).to.be.revertedWith("Liquidation: not undercollateralized");
+
+      // Price of WBTC drops such that C-ratio falls below liquidation ratio
+      await setWbtcPrice(39.9);
+
+      // Can mark position normally
+      await expect(
+        stack.collaterals.wbtc.liquidation
+          .connect(bob)
+          .markPositionAsUndercollateralized(alice.address)
+      )
+        .to.emit(stack.collaterals.wbtc.liquidation, "PositionMarked")
+        .withArgs(
+          alice.address, // user
+          bob.address // marker
+        );
+
+      // Confirm mark
+      expect(
+        await stack.collaterals.wbtc.liquidation.isPositionMarkedAsUndercollateralized(
+          alice.address
+        )
+      ).to.equal(true);
+      expect(
+        await stack.collaterals.wbtc.liquidation.getUndercollateralizationMarkMarker(
+          alice.address
+        )
+      ).to.equal(bob.address);
+    });
+
+    it("can't mark ATH position when only WBTC position is undercollateralized", async function () {
+      // WBTC price drops
+      await setWbtcPrice(39.9);
+
+      // Can only mark WBTC
+      await stack.collaterals.wbtc.liquidation
+        .connect(bob)
+        .markPositionAsUndercollateralized(alice.address);
+      await expect(
+        stack.collaterals.ath.liquidation
+          .connect(bob)
+          .markPositionAsUndercollateralized(alice.address)
+      ).to.be.revertedWith("Liquidation: not undercollateralized");
+    });
+
+    it("can't mark WBTC position when only ATH position is undercollateralized", async function () {
+      // ATH price drops
+      await setAthPrice(0.01);
+
+      // Can only mark ATH
+      await stack.collaterals.ath.liquidation
+        .connect(bob)
+        .markPositionAsUndercollateralized(alice.address);
+      await expect(
+        stack.collaterals.wbtc.liquidation
+          .connect(bob)
+          .markPositionAsUndercollateralized(alice.address)
+      ).to.be.revertedWith("Liquidation: not undercollateralized");
     });
   });
 });
