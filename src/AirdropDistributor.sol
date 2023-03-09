@@ -75,7 +75,7 @@ contract AirdropDistributor is OwnableUpgradeable {
             _unlockCount,
             address(_rewardLocker),
             address(_token)
-            );
+        );
     }
 
     function setFirstUnlockTime(uint256 _firstUnlockTime) external onlyOwner {

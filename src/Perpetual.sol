@@ -361,7 +361,7 @@ contract Perpetual is IPerpetual, OwnableUpgradeable {
             fees,
             liquidatorReward,
             insuranceContribution
-            );
+        );
     }
 
     function _closeLongPosition(address user, uint256 positionId, uint256 amount, address to, bool isLiquidation)

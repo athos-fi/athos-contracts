@@ -271,7 +271,7 @@ contract Liquidation is OwnableUpgradeable {
             totalFromLocked,
             rewards.markerReward,
             rewards.liquidatorReward
-            );
+        );
 
         // If the position is completely liquidated, remove the marker
         if (params.lusdToBurn == maxLusdToBurn) {
