@@ -11,6 +11,7 @@ import "./interfaces/IDebtSystem.sol";
 import "./interfaces/IOracleRouter.sol";
 import "./interfaces/IRewardLocker.sol";
 import "./libraries/SafeDecimalMath.sol";
+import "./utilities/ConfigHelper.sol";
 
 contract Liquidation is OwnableUpgradeable {
     using SafeDecimalMath for uint256;
@@ -40,6 +41,7 @@ contract Liquidation is OwnableUpgradeable {
         uint256 stakedCollateral;
         uint256 lockedCollateral;
         uint256 collateralPrice;
+        uint8 collateralDecimals;
         uint256 collateralValue;
         uint256 collateralizationRatio;
     }
@@ -90,12 +92,6 @@ contract Liquidation is OwnableUpgradeable {
 
     mapping(address => UndercollateralizationMark) public undercollateralizationMarks;
 
-    bytes32 public constant LIQUIDATION_MARKER_REWARD_KEY = "LiquidationMarkerReward";
-    bytes32 public constant LIQUIDATION_LIQUIDATOR_REWARD_KEY = "LiquidationLiquidatorReward";
-    bytes32 public constant LIQUIDATION_RATIO_KEY = "LiquidationRatio";
-    bytes32 public constant LIQUIDATION_DELAY_KEY = "LiquidationDelay";
-    bytes32 public constant BUILD_RATIO_KEY = "BuildRatio";
-
     function isPositionMarkedAsUndercollateralized(address user) public view returns (bool) {
         return undercollateralizationMarks[user].timestamp > 0;
     }
@@ -142,7 +138,8 @@ contract Liquidation is OwnableUpgradeable {
         require(!isPositionMarkedAsUndercollateralized(user), "Liquidation: already marked");
 
         EvalUserPositionResult memory evalResult = evalUserPostion(user);
-        uint256 liquidationRatio = config.getUint(LIQUIDATION_RATIO_KEY);
+        uint256 liquidationRatio =
+            config.getUint(ConfigHelper.getLiquidationRatioKey(collateralSystem.collateralCurrency()));
         require(evalResult.collateralizationRatio > liquidationRatio, "Liquidation: not undercollateralized");
 
         undercollateralizationMarks[user] =
@@ -156,7 +153,7 @@ contract Liquidation is OwnableUpgradeable {
 
         // Can only remove mark if C ratio is restored to issuance ratio
         EvalUserPositionResult memory evalResult = evalUserPostion(user);
-        uint256 issuanceRatio = config.getUint(BUILD_RATIO_KEY);
+        uint256 issuanceRatio = config.getUint(ConfigHelper.getBuildRatioKey(collateralSystem.collateralCurrency()));
         require(evalResult.collateralizationRatio <= issuanceRatio, "Liquidation: still undercollateralized");
 
         delete undercollateralizationMarks[user];
@@ -180,7 +177,8 @@ contract Liquidation is OwnableUpgradeable {
         // Check mark and delay
         UndercollateralizationMark memory mark = undercollateralizationMarks[params.user];
         {
-            uint256 liquidationDelay = config.getUint(LIQUIDATION_DELAY_KEY);
+            uint256 liquidationDelay =
+                config.getUint(ConfigHelper.getLiquidationDelayKey(collateralSystem.collateralCurrency()));
             require(mark.timestamp > 0, "Liquidation: not marked for undercollateralized");
             require(block.timestamp > mark.timestamp + liquidationDelay, "Liquidation: liquidation delay not passed");
         }
@@ -211,7 +209,11 @@ contract Liquidation is OwnableUpgradeable {
         buildBurnSystem.burnForLiquidation(params.user, params.liquidator, params.lusdToBurn);
 
         LiquidationRewardCalculationResult memory rewards = calculateRewards(
-            params.lusdToBurn, evalResult.collateralPrice, ratios.markerRewardRatio, ratios.liquidatorRewardRatio
+            params.lusdToBurn,
+            evalResult.collateralPrice,
+            evalResult.collateralDecimals,
+            ratios.markerRewardRatio,
+            ratios.liquidatorRewardRatio
         );
 
         {
@@ -266,7 +268,7 @@ contract Liquidation is OwnableUpgradeable {
             mark.marker,
             params.liquidator,
             params.lusdToBurn,
-            "ATH",
+            collateralSystem.collateralCurrency(),
             totalFromStaked,
             totalFromLocked,
             rewards.markerReward,
@@ -284,8 +286,11 @@ contract Liquidation is OwnableUpgradeable {
         (uint256 debtBalance,) = debtSystem.GetUserDebtBalanceInUsd(user);
         (uint256 stakedCollateral, uint256 lockedCollateral) = collateralSystem.getUserLinaCollateralBreakdown(user);
 
-        uint256 collateralPrice = oracleRouter.getPrice("ATH");
-        uint256 collateralValue = stakedCollateral.add(lockedCollateral).multiplyDecimal(collateralPrice);
+        uint8 collateralDecimals = collateralSystem.collateralDecimals();
+
+        uint256 collateralPrice = oracleRouter.getPrice(collateralSystem.collateralCurrency());
+        uint256 collateralValue =
+            stakedCollateral.add(lockedCollateral).multiplyDecimalWith(collateralPrice, collateralDecimals);
 
         uint256 collateralizationRatio = collateralValue == 0 ? 0 : debtBalance.divideDecimal(collateralValue);
         return EvalUserPositionResult({
@@ -293,15 +298,19 @@ contract Liquidation is OwnableUpgradeable {
             stakedCollateral: stakedCollateral,
             lockedCollateral: lockedCollateral,
             collateralPrice: collateralPrice,
+            collateralDecimals: collateralDecimals,
             collateralValue: collateralValue,
             collateralizationRatio: collateralizationRatio
         });
     }
 
     function fetchRatios() private view returns (FetchRatiosResult memory) {
-        uint256 issuanceRatio = config.getUint(BUILD_RATIO_KEY);
-        uint256 markerRewardRatio = config.getUint(LIQUIDATION_MARKER_REWARD_KEY);
-        uint256 liquidatorRewardRatio = config.getUint(LIQUIDATION_LIQUIDATOR_REWARD_KEY);
+        bytes32 collateralCurrency = collateralSystem.collateralCurrency();
+
+        uint256 issuanceRatio = config.getUint(ConfigHelper.getBuildRatioKey(collateralCurrency));
+        uint256 markerRewardRatio = config.getUint(ConfigHelper.getLiquidationMarkerRewardKey(collateralCurrency));
+        uint256 liquidatorRewardRatio =
+            config.getUint(ConfigHelper.getLiquidationLiquidatorRewardKey(collateralCurrency));
 
         return FetchRatiosResult({
             issuanceRatio: issuanceRatio,
@@ -313,11 +322,12 @@ contract Liquidation is OwnableUpgradeable {
     function calculateRewards(
         uint256 lusdToBurn,
         uint256 collateralPrice,
+        uint8 collateralDecimals,
         uint256 markerRewardRatio,
         uint256 liquidatorRewardRatio
     ) private pure returns (LiquidationRewardCalculationResult memory) {
         // Amount of collateral with the same value as the debt burnt (without taking into account rewards)
-        uint256 collateralWithdrawalAmount = lusdToBurn.divideDecimal(collateralPrice);
+        uint256 collateralWithdrawalAmount = lusdToBurn.divideDecimalWith(collateralPrice, collateralDecimals);
 
         // Reward amounts
         uint256 markerReward = collateralWithdrawalAmount.multiplyDecimal(markerRewardRatio);
@@ -342,7 +352,9 @@ contract Liquidation is OwnableUpgradeable {
         require(amountFromLocked <= params.lockedCollateral, "Liquidation: insufficient locked collateral");
 
         if (amountFromStaked > 0) {
-            collateralSystem.moveCollateral(params.user, params.liquidator, "ATH", amountFromStaked);
+            collateralSystem.moveCollateral(
+                params.user, params.liquidator, collateralSystem.collateralCurrency(), amountFromStaked
+            );
         }
 
         if (amountFromLocked > 0) {
@@ -371,8 +383,12 @@ contract Liquidation is OwnableUpgradeable {
             markerRewardFromLocked = markerRewardFromLocked.sub(markerRewardFromStaked);
             liquidatorRewardFromLocked = liquidatorRewardFromLocked.sub(liquidatorRewardFromStaked);
 
-            collateralSystem.moveCollateral(params.user, params.marker, "ATH", markerRewardFromStaked);
-            collateralSystem.moveCollateral(params.user, params.liquidator, "ATH", liquidatorRewardFromStaked);
+            collateralSystem.moveCollateral(
+                params.user, params.marker, collateralSystem.collateralCurrency(), markerRewardFromStaked
+            );
+            collateralSystem.moveCollateral(
+                params.user, params.liquidator, collateralSystem.collateralCurrency(), liquidatorRewardFromStaked
+            );
         }
 
         if (amountFromLocked > 0) {

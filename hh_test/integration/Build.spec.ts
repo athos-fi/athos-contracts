@@ -30,13 +30,13 @@ describe("Integration | Build", function () {
     );
 
     // Mint 1,000,000 ATH to Alice
-    await stack.athToken
+    await stack.collaterals.ath.token
       .connect(deployer)
       .transfer(alice.address, expandTo18Decimals(1_000_000));
 
-    await stack.athToken
+    await stack.collaterals.ath.token
       .connect(alice)
-      .approve(stack.collateralSystem.address, uint256Max);
+      .approve(stack.collaterals.ath.collateralSystem.address, uint256Max);
   });
 
   it("can build athUSD with just locked reward", async function () {
@@ -48,7 +48,7 @@ describe("Integration | Build", function () {
     );
 
     // Alice can build 1 athUSD without staking
-    await stack.buildBurnSystem.connect(alice).BuildAsset(
+    await stack.collaterals.ath.buildBurnSystem.connect(alice).BuildAsset(
       expandTo18Decimals(1) // amount
     );
 
@@ -59,14 +59,14 @@ describe("Integration | Build", function () {
 
   it("maxRedeemableLina() should return staked amount when debt is zero regardless of locked collateral", async function () {
     // Alice stakes 9,000 ATH
-    await stack.collateralSystem.connect(alice).Collateral(
+    await stack.collaterals.ath.collateralSystem.connect(alice).Collateral(
       formatBytes32String("ATH"), // _currency
       expandTo18Decimals(9_000) // _amount
     );
 
     // Returns 9,000 when locked amount is zero
     expect(
-      await stack.collateralSystem.maxRedeemableLina(
+      await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
         alice.address // user
       )
     ).to.equal(expandTo18Decimals(9_000));
@@ -80,7 +80,7 @@ describe("Integration | Build", function () {
 
     // Returns 9,000 when locked amount is less than staked
     expect(
-      await stack.collateralSystem.maxRedeemableLina(
+      await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
         alice.address // user
       )
     ).to.equal(expandTo18Decimals(9_000));
@@ -94,7 +94,7 @@ describe("Integration | Build", function () {
 
     // Returns 9,000 when locked amount is the same as staked
     expect(
-      await stack.collateralSystem.maxRedeemableLina(
+      await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
         alice.address // user
       )
     ).to.equal(expandTo18Decimals(9_000));
@@ -108,7 +108,7 @@ describe("Integration | Build", function () {
 
     // Returns 9,000 when locked amount is the same as staked
     expect(
-      await stack.collateralSystem.maxRedeemableLina(
+      await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
         alice.address // user
       )
     ).to.equal(expandTo18Decimals(9_000));
@@ -116,19 +116,19 @@ describe("Integration | Build", function () {
 
   it("maxRedeemableLina() should reflect debt amount", async function () {
     // Alice stakes 9,000 ATH
-    await stack.collateralSystem.connect(alice).Collateral(
+    await stack.collaterals.ath.collateralSystem.connect(alice).Collateral(
       formatBytes32String("ATH"), // _currency
       expandTo18Decimals(9_000) // _amount
     );
 
     // Alice builds 10 athUSD
-    await stack.buildBurnSystem.connect(alice).BuildAsset(
+    await stack.collaterals.ath.buildBurnSystem.connect(alice).BuildAsset(
       expandTo18Decimals(10) // amount
     );
 
     // 5,000 ATH is set aside
     expect(
-      await stack.collateralSystem.maxRedeemableLina(
+      await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
         alice.address // user
       )
     ).to.equal(expandTo18Decimals(4_000));
@@ -142,7 +142,7 @@ describe("Integration | Build", function () {
 
     // Now 8,000 ATH is withdrawable
     expect(
-      await stack.collateralSystem.maxRedeemableLina(
+      await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
         alice.address // user
       )
     ).to.equal(expandTo18Decimals(8_000));
@@ -156,7 +156,7 @@ describe("Integration | Build", function () {
 
     // All staked amount available
     expect(
-      await stack.collateralSystem.maxRedeemableLina(
+      await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
         alice.address // user
       )
     ).to.equal(expandTo18Decimals(9_000));
@@ -168,7 +168,7 @@ describe("Integration | Build", function () {
       [(await getBlockDateTime(ethers.provider)).plus({ years: 1 }).toSeconds()] // _lockTo
     );
     expect(
-      await stack.collateralSystem.maxRedeemableLina(
+      await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
         alice.address // user
       )
     ).to.equal(expandTo18Decimals(9_000));

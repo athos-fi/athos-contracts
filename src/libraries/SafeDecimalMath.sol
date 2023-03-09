@@ -22,6 +22,10 @@ library SafeDecimalMath {
         return x * y / UNIT;
     }
 
+    function multiplyDecimalWith(uint256 x, uint256 y, uint8 _decimals) internal pure returns (uint256) {
+        return x * y / (10 ** _decimals);
+    }
+
     function _multiplyDecimalRound(uint256 x, uint256 y, uint256 precisionUnit) private pure returns (uint256) {
         uint256 quotientTimesTen = x * y / (precisionUnit / 10);
 
@@ -42,6 +46,10 @@ library SafeDecimalMath {
 
     function divideDecimal(uint256 x, uint256 y) internal pure returns (uint256) {
         return x * UNIT / y;
+    }
+
+    function divideDecimalWith(uint256 x, uint256 y, uint8 _decimals) internal pure returns (uint256) {
+        return x * (10 ** _decimals) / y;
     }
 
     function _divideDecimalRound(uint256 x, uint256 y, uint256 precisionUnit) private pure returns (uint256) {

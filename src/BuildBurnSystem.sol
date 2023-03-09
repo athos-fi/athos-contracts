@@ -11,6 +11,7 @@ import "./interfaces/IConfig.sol";
 import "./interfaces/IDebtSystem.sol";
 import "./interfaces/IOracleRouter.sol";
 import "./libraries/SafeDecimalMath.sol";
+import "./utilities/ConfigHelper.sol";
 
 contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
@@ -23,8 +24,6 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     ICollateralSystem public collaterSys;
     IConfig public mConfig;
     address public liquidation;
-
-    bytes32 public constant CONFIG_BUILD_RATIO = "BuildRatio";
 
     modifier onlyCollaterSys() {
         require(msg.sender == address(collaterSys), "BuildBurnSystem: not collateral system");
@@ -80,8 +79,8 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     }
 
     function MaxCanBuildAsset(address user) public view returns (uint256) {
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
-        uint256 maxCanBuild = collaterSys.MaxRedeemableInUsd(user).mul(buildRatio).div(SafeDecimalMath.unit());
+        uint256 buildRatio = mConfig.getUint(ConfigHelper.getBuildRatioKey(collaterSys.collateralCurrency()));
+        uint256 maxCanBuild = collaterSys.getFreeCollateralInUsd(user).mul(buildRatio).div(SafeDecimalMath.unit());
         return maxCanBuild;
     }
 
@@ -92,24 +91,11 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     }
 
     function _buildAsset(address user, uint256 amount) internal returns (bool) {
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
-        uint256 maxCanBuild = collaterSys.MaxRedeemableInUsd(user).multiplyDecimal(buildRatio);
+        uint256 buildRatio = mConfig.getUint(ConfigHelper.getBuildRatioKey(collaterSys.collateralCurrency()));
+        uint256 maxCanBuild = collaterSys.getFreeCollateralInUsd(user).multiplyDecimal(buildRatio);
         require(amount <= maxCanBuild, "Build amount too big, you need more collateral");
 
-        // calc debt
-        (uint256 oldUserDebtBalance, uint256 totalAssetSupplyInUsd) = debtSystem.GetUserDebtBalanceInUsd(user);
-
-        uint256 newTotalAssetSupply = totalAssetSupplyInUsd.add(amount);
-        // update debt data
-        uint256 buildDebtProportion = amount.divideDecimalRoundPrecise(newTotalAssetSupply); // debtPercentage
-        uint256 oldTotalProportion = SafeDecimalMath.preciseUnit().sub(buildDebtProportion); //
-        uint256 newUserDebtProportion = buildDebtProportion;
-        if (oldUserDebtBalance > 0) {
-            newUserDebtProportion = oldUserDebtBalance.add(amount).divideDecimalRoundPrecise(newTotalAssetSupply);
-        }
-
-        // update debt
-        debtSystem.UpdateDebt(user, newUserDebtProportion, oldTotalProportion);
+        debtSystem.increaseDebt(user, amount);
 
         // mint asset
         lUSDToken.mint(user, amount);
@@ -127,31 +113,17 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     }
 
     function _burnAsset(address debtUser, address burnUser, uint256 amount) internal {
-        //uint256 buildRatio = mConfig.getUint(mConfig.BUILD_RATIO());
         require(amount > 0, "amount need > 0");
-        // calc debt
-        (uint256 oldUserDebtBalance, uint256 totalAssetSupplyInUsd) = debtSystem.GetUserDebtBalanceInUsd(debtUser);
+
+        (uint256 oldUserDebtBalance,) = debtSystem.GetUserDebtBalanceInUsd(debtUser);
         require(oldUserDebtBalance > 0, "no debt, no burn");
+
         uint256 burnAmount = oldUserDebtBalance < amount ? oldUserDebtBalance : amount;
+
+        debtSystem.decreaseDebt(debtUser, burnAmount);
+
         // burn asset
         lUSDToken.burn(burnUser, burnAmount);
-
-        uint256 newTotalDebtIssued = totalAssetSupplyInUsd.sub(burnAmount);
-
-        uint256 oldTotalProportion = 0;
-        if (newTotalDebtIssued > 0) {
-            uint256 debtPercentage = burnAmount.divideDecimalRoundPrecise(newTotalDebtIssued);
-            oldTotalProportion = SafeDecimalMath.preciseUnit().add(debtPercentage);
-        }
-
-        uint256 newUserDebtProportion = 0;
-        if (oldUserDebtBalance > burnAmount) {
-            uint256 newDebt = oldUserDebtBalance.sub(burnAmount);
-            newUserDebtProportion = newDebt.divideDecimalRoundPrecise(newTotalDebtIssued);
-        }
-
-        // update debt
-        debtSystem.UpdateDebt(debtUser, newUserDebtProportion, oldTotalProportion);
     }
 
     // burn
@@ -165,7 +137,7 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     function BurnAssetToTarget() external whenNotPaused returns (bool) {
         address user = msg.sender;
 
-        uint256 buildRatio = mConfig.getUint(CONFIG_BUILD_RATIO);
+        uint256 buildRatio = mConfig.getUint(ConfigHelper.getBuildRatioKey(collaterSys.collateralCurrency()));
         uint256 totalCollateral = collaterSys.GetUserTotalCollateralInUsd(user);
         uint256 maxBuildAssetToTarget = totalCollateral.multiplyDecimal(buildRatio);
         (uint256 debtAsset,) = debtSystem.GetUserDebtBalanceInUsd(user);

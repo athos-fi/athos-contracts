@@ -41,7 +41,8 @@ describe("CollateralSystem", function () {
 
     athToken = await MockERC20.deploy(
       "Athos Finance", // _name
-      "ATH" // _symbol
+      "ATH", // _symbol
+      18 // _decimals
     );
 
     assetRegistry = await AssetRegistry.deploy();
@@ -51,12 +52,7 @@ describe("CollateralSystem", function () {
 
     await collateralSystem
       .connect(deployer)
-      .UpdateTokenInfos(
-        [formatBytes32String("ATH")],
-        [athToken.address],
-        [1],
-        [false]
-      );
+      .updateTokenInfo(formatBytes32String("ATH"), athToken.address, 1, false);
   });
 
   it("only reward locker can call collateralFromUnlockReward function", async () => {
@@ -177,7 +173,7 @@ describe("CollateralSystem", function () {
           ethers.utils.formatBytes32String("ETH"),
           expandTo18Decimals(10)
         )
-    ).to.be.revertedWith("CollateralSystem: Invalid token symbol");
+    ).to.be.revertedWith("CollateralSystem: currency symbol mismatch");
 
     let athTokeninfo = await collateralSystem.tokenInfos(
       formatBytes32String("ATH")

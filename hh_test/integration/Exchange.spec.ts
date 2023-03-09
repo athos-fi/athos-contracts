@@ -89,21 +89,21 @@ describe("Integration | Exchange", function () {
     );
 
     // Mint 1,000,000 ATH to Alice
-    await stack.athToken
+    await stack.collaterals.ath.token
       .connect(deployer)
       .transfer(alice.address, expandTo18Decimals(1_000_000));
 
     // Alice stakes all ATH
-    await stack.athToken
+    await stack.collaterals.ath.token
       .connect(alice)
-      .approve(stack.collateralSystem.address, uint256Max);
-    await stack.collateralSystem.connect(alice).Collateral(
+      .approve(stack.collaterals.ath.collateralSystem.address, uint256Max);
+    await stack.collaterals.ath.collateralSystem.connect(alice).Collateral(
       formatBytes32String("ATH"), // _currency
       expandTo18Decimals(1_000_000) // _amount
     );
 
     // Alice builds 1,000 athUSD
-    await stack.buildBurnSystem.connect(alice).BuildAsset(
+    await stack.collaterals.ath.buildBurnSystem.connect(alice).BuildAsset(
       expandTo18Decimals(1_000) // amount
     );
   });

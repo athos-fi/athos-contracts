@@ -92,7 +92,8 @@ describe("RewardSystem", function () {
 
     ausd = await MockERC20.deploy(
       "athUSD", // _name
-      "athUSD" // _symbol
+      "athUSD", // _symbol
+      18 // _decimals
     );
 
     collateralSystem = await waffle.deployMockContract(
