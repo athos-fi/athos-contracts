@@ -29,8 +29,9 @@ do
   cat $DIST_SRC_DIR$CONTRACT_NAME.sol | jq -Rs . > $DIST_SRC_DIR$CONTRACT_NAME.json
   rm $DIST_SRC_DIR$CONTRACT_NAME.sol
 
-  if [ -f ./out/$CONTRACT_NAME.sol/$CONTRACT_NAME.json ]; then
-    cat ./out/$CONTRACT_NAME.sol/$CONTRACT_NAME.json | jq '{bytecode: .bytecode.object, linkReferences: .bytecode.linkReferences}' > $DIST_BIN_DIR$CONTRACT_NAME.json
-    cat ./out/$CONTRACT_NAME.sol/$CONTRACT_NAME.json | jq '.abi' > $DIST_ABI_DIR$CONTRACT_NAME.json
+  if [ -d ./out/$CONTRACT_NAME.sol ]; then
+    LATEST_ARTIFACT_NAME=$(ls ./out/$CONTRACT_NAME.sol | tail -1)
+    cat ./out/$CONTRACT_NAME.sol/$LATEST_ARTIFACT_NAME | jq '{bytecode: .bytecode.object, linkReferences: .bytecode.linkReferences}' > $DIST_BIN_DIR$CONTRACT_NAME.json
+    cat ./out/$CONTRACT_NAME.sol/$LATEST_ARTIFACT_NAME | jq '.abi' > $DIST_ABI_DIR$CONTRACT_NAME.json
   fi
 done
