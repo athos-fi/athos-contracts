@@ -17,6 +17,9 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
     using SafeDecimalMath for uint256;
 
+    event Mint(address user, uint256 amount);
+    event Burn(address debtUser, address burnUser, uint256 burnAmount);
+
     IAsset public lUSDToken;
 
     IDebtSystem public debtSystem;
@@ -100,6 +103,8 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
         // mint asset
         lUSDToken.mint(user, amount);
 
+        emit Mint(user, amount);
+
         return true;
     }
 
@@ -124,6 +129,8 @@ contract BuildBurnSystem is PausableUpgradeable, OwnableUpgradeable {
 
         // burn asset
         lUSDToken.burn(burnUser, burnAmount);
+
+        emit Burn(debtUser, burnUser, burnAmount);
     }
 
     // burn
