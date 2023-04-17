@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "../interfaces/ICollateralSystem.sol";
 import "../interfaces/IRewardLocker.sol";
 
-
 /**
  * @title MockRewardSystem
  *
