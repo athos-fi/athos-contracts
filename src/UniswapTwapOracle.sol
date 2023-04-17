@@ -130,7 +130,7 @@ contract UniswapTwapOracle is IUniswapTwapOracle, AccessControlUpgradeable {
         } else if (baseDecimal < PRICE_DECIMALS) {
             price = rawUniswapPriceMantissa * 10 ** (PRICE_DECIMALS - baseDecimal);
         } else {
-            price = rawUniswapPriceMantissa * 10 ** (baseDecimal - PRICE_DECIMALS);
+            price = rawUniswapPriceMantissa / 10 ** (baseDecimal - PRICE_DECIMALS);
         }
     }
 }
