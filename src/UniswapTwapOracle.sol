@@ -13,7 +13,7 @@ contract UniswapTwapOracle is IUniswapTwapOracle, AccessControlUpgradeable {
 
     IUniswapCheckpoints public checkpoints;
     address[] public priceRoute;
-    uint8[] public baseDecimals;
+    uint8[] public quoteDecimals;
     uint256 public minInterval;
     uint256 public maxInterval;
     uint256 public minPrice;
@@ -62,7 +62,7 @@ contract UniswapTwapOracle is IUniswapTwapOracle, AccessControlUpgradeable {
         for (uint256 indToken = 0; indToken < _priceRoute.length; indToken++) {
             priceRoute.push(_priceRoute[indToken]);
             if (indToken > 0) {
-                baseDecimals.push(IERC20MetadataUpgradeable(_priceRoute[indToken]).decimals());
+                quoteDecimals.push(IERC20MetadataUpgradeable(_priceRoute[indToken]).decimals());
             }
         }
 
@@ -82,7 +82,7 @@ contract UniswapTwapOracle is IUniswapTwapOracle, AccessControlUpgradeable {
         uint256 lastPrice = 0;
 
         for (uint256 indPair = 0; indPair < priceRoute.length - 1; indPair++) {
-            uint256 currentPrice = getPairPrice(priceRoute[indPair], priceRoute[indPair + 1], baseDecimals[indPair]);
+            uint256 currentPrice = getPairPrice(priceRoute[indPair], priceRoute[indPair + 1], quoteDecimals[indPair]);
             if (lastPrice == 0) {
                 lastPrice = currentPrice;
             } else {
@@ -103,7 +103,7 @@ contract UniswapTwapOracle is IUniswapTwapOracle, AccessControlUpgradeable {
     }
 
     // Adapted from: https://github.com/compound-finance/open-oracle/blob/0e148fdb0e8cbe4d412548490609679621ab2325/contracts/Uniswap/UniswapAnchoredView.sol#L221
-    function getPairPrice(address baseToken, address quoteToken, uint8 baseDecimal)
+    function getPairPrice(address baseToken, address quoteToken, uint8 quoteDecimal)
         private
         view
         returns (uint256 price)
@@ -125,12 +125,12 @@ contract UniswapTwapOracle is IUniswapTwapOracle, AccessControlUpgradeable {
         }
         uint256 rawUniswapPriceMantissa = FixedPoint.decode112with18(priceAverage);
 
-        if (baseDecimal == PRICE_DECIMALS) {
+        if (quoteDecimal == PRICE_DECIMALS) {
             price = rawUniswapPriceMantissa;
-        } else if (baseDecimal < PRICE_DECIMALS) {
-            price = rawUniswapPriceMantissa * 10 ** (PRICE_DECIMALS - baseDecimal);
+        } else if (quoteDecimal < PRICE_DECIMALS) {
+            price = rawUniswapPriceMantissa * 10 ** (PRICE_DECIMALS - quoteDecimal);
         } else {
-            price = rawUniswapPriceMantissa / 10 ** (baseDecimal - PRICE_DECIMALS);
+            price = rawUniswapPriceMantissa / 10 ** (quoteDecimal - PRICE_DECIMALS);
         }
     }
 }
