@@ -2,6 +2,7 @@ export interface Config {
   foundationFeeHolder: string;
   insurnaceFundHolder: string;
   rewardSigner: string;
+  rewardSigners: string[];
   twapUpdater: string;
   firstRewardPeriodStartTime: string;
   uniswapFactory: string;
