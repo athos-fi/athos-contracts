@@ -299,7 +299,7 @@ export const deployAthosStack = async (
       (
         await ethers.provider.getBlock("latest")
       ).timestamp, // _firstPeriodStartTime
-      MOCK_ADDRESS, // _rewardSigner
+      [MOCK_ADDRESS, "0xffffffffffffffffffffffffffffffffffffffff"], // _rewardSigners
       ausdToken.address, // _lusdAddress
       athCollateralSystem.address, // _collateralSystemAddress
       rewardLocker.address, // _rewardLockerAddress
