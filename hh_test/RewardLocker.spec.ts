@@ -384,7 +384,10 @@ describe("RewardLocker", function () {
     rewardLocker.connect(deployer).updateRewarderAddress(rewarder.address);
 
     const RewardLockerV2 = await ethers.getContractFactory("RewardLockerV2");
-    rewardLocker = await upgrades.upgradeProxy(rewardLocker.address, RewardLockerV2);
+    rewardLocker = await upgrades.upgradeProxy(
+      rewardLocker.address,
+      RewardLockerV2
+    );
 
     await setNextBlockTimestamp(
       ethers.provider,
