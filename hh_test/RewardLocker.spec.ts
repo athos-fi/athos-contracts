@@ -1,4 +1,4 @@
-import { ethers, waffle } from "hardhat";
+import { ethers, waffle, upgrades } from "hardhat";
 import { expect, use } from "chai";
 import { BigNumber, Contract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
@@ -24,7 +24,7 @@ describe("RewardLocker", function () {
     rewarder: SignerWithAddress;
 
   let accessController: AccessController,
-    rewardLocker: RewardLocker,
+    rewardLocker: Contract,
     collateralSystem: Contract;
 
   beforeEach(async function () {
@@ -38,7 +38,7 @@ describe("RewardLocker", function () {
     accessController = await AccessController.deploy();
     await accessController.connect(deployer).__AccessController_init();
 
-    rewardLocker = await RewardLocker.deploy();
+    rewardLocker = await upgrades.deployProxy(RewardLocker);
     await rewardLocker.connect(deployer).__RewardLocker_init(
       mockAddress, // _linaTokenAddr
       accessController.address // _accessCtrl
@@ -335,6 +335,71 @@ describe("RewardLocker", function () {
     await setNextBlockTimestamp(
       ethers.provider,
       unlockTime.plus({ seconds: 1 }).toSeconds()
+    );
+
+    await expect(
+      rewardLocker.connect(charlie).unlockReward(
+        bob.address, // user
+        1 // rewardEntryId
+      )
+    )
+      .to.emit(rewardLocker, "RewardEntryUnlocked")
+      .withArgs(
+        1, //entryId
+        bob.address, // user
+        10 // amount
+      );
+
+    const rewardEntry = await rewardLocker.rewardEntries(1, bob.address);
+    expect(rewardEntry.amount).to.equal(0);
+    expect(rewardEntry.unlockTime).to.equal(0);
+
+    expect(await rewardLocker.lockedAmountByAddresses(bob.address)).to.equal(0);
+    expect(await rewardLocker.totalLockedAmount()).to.equal(0);
+  });
+
+  it("after upgrading, reward can only be unlocked if new unlock time is reached", async () => {
+    let unlockTime: DateTime = (await getBlockDateTime(ethers.provider)).plus({
+      hours: 1,
+    });
+
+    await accessController.connect(deployer).grantRole(
+      formatBytes32String("LOCK_REWARD"), // role
+      alice.address // account
+    );
+
+    await rewardLocker.connect(alice).addReward(
+      bob.address, // user
+      10, // amount
+      unlockTime.toSeconds() // unlockTime
+    );
+
+    expect(await rewardLocker.lockedAmountByAddresses(bob.address)).to.equal(
+      10
+    );
+
+    rewardLocker
+      .connect(deployer)
+      .updateCollateralSystemAddress(collateralSystem.address);
+    rewardLocker.connect(deployer).updateRewarderAddress(rewarder.address);
+
+    const RewardLockerV2 = await ethers.getContractFactory("RewardLockerV2");
+    rewardLocker = await upgrades.upgradeProxy(rewardLocker.address, RewardLockerV2);
+
+    await setNextBlockTimestamp(
+      ethers.provider,
+      unlockTime.plus({ weeks: 52 }).minus({ seconds: 10 }).toSeconds()
+    );
+    await expect(
+      rewardLocker.connect(charlie).unlockReward(
+        bob.address, // user
+        1 // rewardEntryId
+      )
+    ).to.be.revertedWith("RewardLocker: Unlock time not reached");
+
+    await setNextBlockTimestamp(
+      ethers.provider,
+      unlockTime.plus({ weeks: 52 }).plus({ seconds: 1 }).toSeconds()
     );
 
     await expect(
