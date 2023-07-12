@@ -17,7 +17,7 @@ const runScript = async () => {
     ],
     {
       initializer: "__AthToken_init",
-    }
+    },
   );
   stackManager.setDeployment(DeploymentKey.AthToken, athToken.address);
 };

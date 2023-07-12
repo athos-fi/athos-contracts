@@ -31,7 +31,7 @@ describe("RewardLocker", function () {
     [deployer, alice, bob, charlie, rewarder] = await ethers.getSigners();
 
     const AccessController = await ethers.getContractFactory(
-      "AccessController"
+      "AccessController",
     );
     const RewardLocker = await ethers.getContractFactory("RewardLocker");
 
@@ -41,12 +41,12 @@ describe("RewardLocker", function () {
     rewardLocker = await upgrades.deployProxy(RewardLocker);
     await rewardLocker.connect(deployer).__RewardLocker_init(
       mockAddress, // _linaTokenAddr
-      accessController.address // _accessCtrl
+      accessController.address, // _accessCtrl
     );
 
     collateralSystem = await waffle.deployMockContract(
       deployer,
-      ICollateralSystem.abi
+      ICollateralSystem.abi,
     );
     await collateralSystem.mock.collateralFromUnlockReward.returns();
   });
@@ -56,28 +56,28 @@ describe("RewardLocker", function () {
       rewardLocker.connect(alice).addReward(
         bob.address, // user
         10, // amount
-        20 // unlockTime
-      )
+        20, // unlockTime
+      ),
     ).to.be.revertedWith("RewardLocker: not LOCK_REWARD role");
 
     await accessController.connect(deployer).grantRole(
       formatBytes32String("LOCK_REWARD"), // role
-      alice.address // account
+      alice.address, // account
     );
 
     await expect(
       rewardLocker.connect(alice).addReward(
         bob.address, // user
         10, // amount
-        20 // unlockTime
-      )
+        20, // unlockTime
+      ),
     )
       .to.emit(rewardLocker, "RewardEntryAdded")
       .withArgs(
         1, //entryId
         bob.address, // user
         10, // amount
-        20 // unlockTime
+        20, // unlockTime
       );
 
     const rewardEntry = await rewardLocker.rewardEntries(1, bob.address);
@@ -85,7 +85,7 @@ describe("RewardLocker", function () {
     expect(rewardEntry.unlockTime).to.equal(20);
 
     expect(await rewardLocker.lockedAmountByAddresses(bob.address)).to.equal(
-      10
+      10,
     );
     expect(await rewardLocker.totalLockedAmount()).to.equal(10);
   });
@@ -95,30 +95,30 @@ describe("RewardLocker", function () {
       rewardLocker.connect(alice).migrateRewards(
         [alice.address, bob.address], // users
         [10, 20], // amounts
-        [30, 40] // unlockTimes
-      )
+        [30, 40], // unlockTimes
+      ),
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await expect(
       rewardLocker.connect(deployer).migrateRewards(
         [alice.address, bob.address], // users
         [10, 20], // amounts
-        [30, 40] // unlockTimes
-      )
+        [30, 40], // unlockTimes
+      ),
     )
       .to.emit(rewardLocker, "RewardEntryAdded")
       .withArgs(
         1, //entryId
         alice.address, // user
         10, // amount
-        30 // unlockTime
+        30, // unlockTime
       )
       .and.emit(rewardLocker, "RewardEntryAdded")
       .withArgs(
         2, //entryId
         bob.address, // user
         20, // amount
-        40 // unlockTime
+        40, // unlockTime
       );
 
     const aliceEntry = await rewardLocker.rewardEntries(1, alice.address);
@@ -130,10 +130,10 @@ describe("RewardLocker", function () {
     expect(bobEntry.unlockTime).to.equal(40);
 
     expect(await rewardLocker.lockedAmountByAddresses(alice.address)).to.equal(
-      10
+      10,
     );
     expect(await rewardLocker.lockedAmountByAddresses(bob.address)).to.equal(
-      20
+      20,
     );
     expect(await rewardLocker.totalLockedAmount()).to.equal(30);
   });
@@ -144,21 +144,21 @@ describe("RewardLocker", function () {
     // Allow Alice to add reward
     await accessController.connect(deployer).grantRole(
       formatBytes32String("LOCK_REWARD"), // role
-      alice.address // account
+      alice.address, // account
     );
 
     await expect(
       rewardLocker.connect(alice).addReward(
         alice.address, // user
         uint216Max.add(1), // amount
-        10 // unlockTime
-      )
+        10, // unlockTime
+      ),
     ).to.revertedWith("RewardLocker: reward amount overflow");
 
     await rewardLocker.connect(alice).addReward(
       alice.address, // user
       uint216Max, // amount
-      10 // unlockTime
+      10, // unlockTime
     );
   });
 
@@ -168,21 +168,21 @@ describe("RewardLocker", function () {
     // Allow Alice to add reward
     await accessController.connect(deployer).grantRole(
       formatBytes32String("LOCK_REWARD"), // role
-      alice.address // account
+      alice.address, // account
     );
 
     await expect(
       rewardLocker.connect(alice).addReward(
         alice.address, // user
         10, // amount
-        uint40Max.add(1) // unlockTime
-      )
+        uint40Max.add(1), // unlockTime
+      ),
     ).to.revertedWith("RewardLocker: unlock time overflow");
 
     await rewardLocker.connect(alice).addReward(
       alice.address, // user
       10, // amount
-      uint40Max // unlockTime
+      uint40Max, // unlockTime
     );
   });
 
@@ -193,17 +193,17 @@ describe("RewardLocker", function () {
 
     await accessController.connect(deployer).grantRole(
       formatBytes32String("LOCK_REWARD"), // role
-      alice.address // account
+      alice.address, // account
     );
 
     await rewardLocker.connect(alice).addReward(
       bob.address, // user
       10, // amount
-      unlockTime.toSeconds() // unlockTime
+      unlockTime.toSeconds(), // unlockTime
     );
 
     expect(await rewardLocker.lockedAmountByAddresses(bob.address)).to.equal(
-      10
+      10,
     );
 
     await setNextBlockTimestamp(ethers.provider, unlockTime);
@@ -217,14 +217,14 @@ describe("RewardLocker", function () {
     await expect(
       rewardLocker.connect(charlie).unlockReward(
         bob.address, // user
-        1 // rewardEntryId
-      )
+        1, // rewardEntryId
+      ),
     )
       .to.emit(rewardLocker, "RewardEntryUnlocked")
       .withArgs(
         1, //entryId
         bob.address, // user
-        10 // amount
+        10, // amount
       );
 
     const rewardEntry = await rewardLocker.rewardEntries(1, bob.address);
@@ -240,21 +240,21 @@ describe("RewardLocker", function () {
     await expect(
       rewardLocker
         .connect(alice)
-        .updateCollateralSystemAddress(collateralSystem.address)
+        .updateCollateralSystemAddress(collateralSystem.address),
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await rewardLocker
       .connect(deployer)
       .updateCollateralSystemAddress(collateralSystem.address);
     expect(await rewardLocker.collateralSystemAddr()).to.be.eq(
-      collateralSystem.address
+      collateralSystem.address,
     );
   });
 
   it("only owner can set rewarder address", async () => {
     expect(await rewardLocker.rewarderAddress()).to.be.eq(zeroAddress);
     await expect(
-      rewardLocker.connect(alice).updateRewarderAddress(rewarder.address)
+      rewardLocker.connect(alice).updateRewarderAddress(rewarder.address),
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
     await rewardLocker
@@ -267,16 +267,16 @@ describe("RewardLocker", function () {
     await expect(
       rewardLocker.connect(charlie).unlockReward(
         bob.address, // user
-        1 // rewardEntryId
-      )
+        1, // rewardEntryId
+      ),
     ).to.be.revertedWith("RewardLocker: Rewarder address not set");
 
     rewardLocker.connect(deployer).updateRewarderAddress(rewarder.address);
     await expect(
       rewardLocker.connect(charlie).unlockReward(
         bob.address, // user
-        1 // rewardEntryId
-      )
+        1, // rewardEntryId
+      ),
     ).to.be.revertedWith("RewardLocker: Collateral system address not set");
   });
 
@@ -289,10 +289,10 @@ describe("RewardLocker", function () {
     await expect(
       rewardLocker.connect(charlie).unlockReward(
         bob.address, // user
-        1 // rewardEntryId
-      )
+        1, // rewardEntryId
+      ),
     ).to.be.revertedWith(
-      "RewardLocker: Reward entry amount is 0, no reward to unlock"
+      "RewardLocker: Reward entry amount is 0, no reward to unlock",
     );
   });
 
@@ -303,17 +303,17 @@ describe("RewardLocker", function () {
 
     await accessController.connect(deployer).grantRole(
       formatBytes32String("LOCK_REWARD"), // role
-      alice.address // account
+      alice.address, // account
     );
 
     await rewardLocker.connect(alice).addReward(
       bob.address, // user
       10, // amount
-      unlockTime.toSeconds() // unlockTime
+      unlockTime.toSeconds(), // unlockTime
     );
 
     expect(await rewardLocker.lockedAmountByAddresses(bob.address)).to.equal(
-      10
+      10,
     );
 
     rewardLocker
@@ -323,31 +323,31 @@ describe("RewardLocker", function () {
 
     await setNextBlockTimestamp(
       ethers.provider,
-      unlockTime.minus({ seconds: 10 }).toSeconds()
+      unlockTime.minus({ seconds: 10 }).toSeconds(),
     );
     await expect(
       rewardLocker.connect(charlie).unlockReward(
         bob.address, // user
-        1 // rewardEntryId
-      )
+        1, // rewardEntryId
+      ),
     ).to.be.revertedWith("RewardLocker: Unlock time not reached");
 
     await setNextBlockTimestamp(
       ethers.provider,
-      unlockTime.plus({ seconds: 1 }).toSeconds()
+      unlockTime.plus({ seconds: 1 }).toSeconds(),
     );
 
     await expect(
       rewardLocker.connect(charlie).unlockReward(
         bob.address, // user
-        1 // rewardEntryId
-      )
+        1, // rewardEntryId
+      ),
     )
       .to.emit(rewardLocker, "RewardEntryUnlocked")
       .withArgs(
         1, //entryId
         bob.address, // user
-        10 // amount
+        10, // amount
       );
 
     const rewardEntry = await rewardLocker.rewardEntries(1, bob.address);
@@ -365,17 +365,17 @@ describe("RewardLocker", function () {
 
     await accessController.connect(deployer).grantRole(
       formatBytes32String("LOCK_REWARD"), // role
-      alice.address // account
+      alice.address, // account
     );
 
     await rewardLocker.connect(alice).addReward(
       bob.address, // user
       10, // amount
-      unlockTime.toSeconds() // unlockTime
+      unlockTime.toSeconds(), // unlockTime
     );
 
     expect(await rewardLocker.lockedAmountByAddresses(bob.address)).to.equal(
-      10
+      10,
     );
 
     rewardLocker
@@ -386,36 +386,36 @@ describe("RewardLocker", function () {
     const RewardLockerV2 = await ethers.getContractFactory("RewardLockerV2");
     rewardLocker = await upgrades.upgradeProxy(
       rewardLocker.address,
-      RewardLockerV2
+      RewardLockerV2,
     );
 
     await setNextBlockTimestamp(
       ethers.provider,
-      unlockTime.plus({ weeks: 52 }).minus({ seconds: 10 }).toSeconds()
+      unlockTime.plus({ weeks: 52 }).minus({ seconds: 10 }).toSeconds(),
     );
     await expect(
       rewardLocker.connect(charlie).unlockReward(
         bob.address, // user
-        1 // rewardEntryId
-      )
+        1, // rewardEntryId
+      ),
     ).to.be.revertedWith("RewardLocker: Unlock time not reached");
 
     await setNextBlockTimestamp(
       ethers.provider,
-      unlockTime.plus({ weeks: 52 }).plus({ seconds: 1 }).toSeconds()
+      unlockTime.plus({ weeks: 52 }).plus({ seconds: 1 }).toSeconds(),
     );
 
     await expect(
       rewardLocker.connect(charlie).unlockReward(
         bob.address, // user
-        1 // rewardEntryId
-      )
+        1, // rewardEntryId
+      ),
     )
       .to.emit(rewardLocker, "RewardEntryUnlocked")
       .withArgs(
         1, //entryId
         bob.address, // user
-        10 // amount
+        10, // amount
       );
 
     const rewardEntry = await rewardLocker.rewardEntries(1, bob.address);
@@ -431,7 +431,7 @@ describe("RewardLocker", function () {
       await rewardLocker.connect(deployer).migrateRewards(
         [alice.address, alice.address], // users
         [10, 20], // amounts
-        [30, 40] // unlockTimes
+        [30, 40], // unlockTimes
       );
     });
 
@@ -441,15 +441,15 @@ describe("RewardLocker", function () {
           alice.address, // user
           [1, 2], // entryIds
           [5, 10, 15], // newAmounts
-          [50, 60, 70] // newUnlockTimes
-        )
+          [50, 60, 70], // newUnlockTimes
+        ),
       ).to.be.revertedWith("Ownable: caller is not the owner");
 
       await rewardLocker.connect(deployer).swapRewardEntries(
         alice.address, // user
         [1, 2], // entryIds
         [5, 10, 15], // newAmounts
-        [50, 60, 70] // newUnlockTimes
+        [50, 60, 70], // newUnlockTimes
       );
     });
 
@@ -459,8 +459,8 @@ describe("RewardLocker", function () {
           alice.address, // user
           [1, 2], // entryIds
           [5, 10, 10], // newAmounts
-          [50, 60, 70] // newUnlockTimes
-        )
+          [50, 60, 70], // newUnlockTimes
+        ),
       ).to.be.revertedWith("RewardLocker: total amount mismatch");
     });
 
@@ -470,8 +470,8 @@ describe("RewardLocker", function () {
           alice.address, // user
           [2, 3], // entryIds
           [5, 10, 15], // newAmounts
-          [50, 60, 70] // newUnlockTimes
-        )
+          [50, 60, 70], // newUnlockTimes
+        ),
       ).to.be.revertedWith("RewardLocker: entry not found");
     });
 
@@ -482,37 +482,37 @@ describe("RewardLocker", function () {
           alice.address, // user
           [1, 2], // entryIds
           [5, 10, 15], // newAmounts
-          [50, 60, 70] // newUnlockTimes
-        )
+          [50, 60, 70], // newUnlockTimes
+        ),
       )
         .to.emit(rewardLocker, "RewardEntryRemoved")
         .withArgs(
-          1 //entryId
+          1, //entryId
         )
         .and.emit(rewardLocker, "RewardEntryRemoved")
         .withArgs(
-          2 //entryId
+          2, //entryId
         )
         .and.emit(rewardLocker, "RewardEntryAdded")
         .withArgs(
           3, //entryId
           alice.address, // user
           5, // amount
-          50 // unlockTime
+          50, // unlockTime
         )
         .and.emit(rewardLocker, "RewardEntryAdded")
         .withArgs(
           4, //entryId
           alice.address, // user
           10, // amount
-          60 // unlockTime
+          60, // unlockTime
         )
         .and.emit(rewardLocker, "RewardEntryAdded")
         .withArgs(
           5, //entryId
           alice.address, // user
           15, // amount
-          70 // unlockTime
+          70, // unlockTime
         );
 
       const entry1 = await rewardLocker.rewardEntries(1, alice.address);
@@ -536,7 +536,7 @@ describe("RewardLocker", function () {
       expect(entry5.unlockTime).to.equal(70);
 
       expect(
-        await rewardLocker.lockedAmountByAddresses(alice.address)
+        await rewardLocker.lockedAmountByAddresses(alice.address),
       ).to.equal(30);
       expect(await rewardLocker.totalLockedAmount()).to.equal(30);
 

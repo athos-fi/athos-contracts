@@ -47,7 +47,7 @@ describe("RewardSystem", function () {
     periodId: BigNumber,
     recipient: string,
     stakingReward: BigNumber,
-    feeReward: BigNumber
+    feeReward: BigNumber,
   ): Promise<string[]> => {
     const domain = {
       name: "Athos",
@@ -73,7 +73,7 @@ describe("RewardSystem", function () {
     };
 
     return await Promise.all(
-      signers.map((signer) => signer._signTypedData(domain, types, value))
+      signers.map((signer) => signer._signTypedData(domain, types, value)),
     );
   };
 
@@ -83,7 +83,7 @@ describe("RewardSystem", function () {
     rewardSigner2 = Wallet.createRandom();
     if (
       BigNumber.from(rewardSigner1.address).gt(
-        BigNumber.from(rewardSigner2.address)
+        BigNumber.from(rewardSigner2.address),
       )
     ) {
       const temp = rewardSigner1;
@@ -93,7 +93,7 @@ describe("RewardSystem", function () {
 
     const MockERC20 = await ethers.getContractFactory("MockERC20");
     const MockRewardLocker = await ethers.getContractFactory(
-      "MockRewardLocker"
+      "MockRewardLocker",
     );
     const RewardSystem = await ethers.getContractFactory("RewardSystem");
 
@@ -104,12 +104,12 @@ describe("RewardSystem", function () {
     ausd = await MockERC20.deploy(
       "athUSD", // _name
       "athUSD", // _symbol
-      18 // _decimals
+      18, // _decimals
     );
 
     collateralSystem = await waffle.deployMockContract(
       deployer,
-      ICollateralSystem.abi
+      ICollateralSystem.abi,
     );
     await collateralSystem.mock.IsSatisfyTargetRatio.returns(true);
 
@@ -121,7 +121,7 @@ describe("RewardSystem", function () {
       [rewardSigner1.address, rewardSigner2.address], // _rewardSigners
       ausd.address, // _lusdAddress
       collateralSystem.address, // _collateralSystemAddress
-      rewardLocker.address // _rewardLockerAddress
+      rewardLocker.address, // _rewardLockerAddress
     );
 
     // RewardSystem holds 1,000,000 athUSD to start
@@ -135,7 +135,7 @@ describe("RewardSystem", function () {
       BigNumber.from(1),
       alice.address,
       expandTo18Decimals(100),
-      expandTo18Decimals(200)
+      expandTo18Decimals(200),
     );
   });
 
@@ -144,7 +144,7 @@ describe("RewardSystem", function () {
     expect(await rewardSystem.rewardSigners(1)).to.equal(rewardSigner2.address);
 
     await expect(
-      rewardSystem.connect(alice).setRewardSigners([alice.address])
+      rewardSystem.connect(alice).setRewardSigners([alice.address]),
     ).to.revertedWith("Ownable: caller is not the owner");
 
     await rewardSystem
@@ -155,10 +155,10 @@ describe("RewardSystem", function () {
       ]);
 
     expect(await rewardSystem.rewardSigners(0)).to.equal(
-      "0x0000000000000000000000000000000000000001"
+      "0x0000000000000000000000000000000000000001",
     );
     expect(await rewardSystem.rewardSigners(1)).to.equal(
-      "0x0000000000000000000000000000000000000002"
+      "0x0000000000000000000000000000000000000002",
     );
   });
 
@@ -170,15 +170,15 @@ describe("RewardSystem", function () {
         1, // periodId
         expandTo18Decimals(100), // stakingReward
         expandTo18Decimals(200), // feeReward
-        aliceSignaturePeriod1 // signature
-      )
+        aliceSignaturePeriod1, // signature
+      ),
     )
       .to.emit(rewardSystem, "RewardClaimed")
       .withArgs(
         alice.address, // recipient
         1, // periodId
         expandTo18Decimals(100), // stakingReward
-        expandTo18Decimals(200) // feeReward
+        expandTo18Decimals(200), // feeReward
       )
       .to.emit(ausd, "Transfer")
       .withArgs(rewardSystem.address, alice.address, expandTo18Decimals(200));
@@ -188,15 +188,15 @@ describe("RewardSystem", function () {
     expect(lastAppendRewardCall._user).to.equal(alice.address);
     expect(lastAppendRewardCall._amount).to.equal(expandTo18Decimals(100));
     expect(lastAppendRewardCall._lockTo).to.equal(
-      getPeriodEndTime(1).plus(stakingRewardLockTime).toSeconds()
+      getPeriodEndTime(1).plus(stakingRewardLockTime).toSeconds(),
     );
 
     // Assert fee reward
     expect(await ausd.balanceOf(rewardSystem.address)).to.equal(
-      expandTo18Decimals(999_800)
+      expandTo18Decimals(999_800),
     );
     expect(await ausd.balanceOf(alice.address)).to.equal(
-      expandTo18Decimals(200)
+      expandTo18Decimals(200),
     );
   });
 
@@ -209,7 +209,7 @@ describe("RewardSystem", function () {
       BigNumber.from(1),
       alice.address,
       expandTo18Decimals(100),
-      expandTo18Decimals(200)
+      expandTo18Decimals(200),
     );
 
     await setNextBlockTimestamp(ethers.provider, getPeriodEndTime(2));
@@ -220,8 +220,8 @@ describe("RewardSystem", function () {
         2, // periodId
         expandTo18Decimals(100), // stakingReward
         expandTo18Decimals(200), // feeReward
-        aliceSignaturePeriod1 // signature
-      )
+        aliceSignaturePeriod1, // signature
+      ),
     ).to.revertedWith("RewardSystem: invalid signature");
 
     // Wrong staking reward
@@ -230,8 +230,8 @@ describe("RewardSystem", function () {
         1, // periodId
         expandTo18Decimals(200), // stakingReward
         expandTo18Decimals(200), // feeReward
-        aliceSignaturePeriod1 // signature
-      )
+        aliceSignaturePeriod1, // signature
+      ),
     ).to.revertedWith("RewardSystem: invalid signature");
 
     // Wrong fee reward
@@ -240,8 +240,8 @@ describe("RewardSystem", function () {
         1, // periodId
         expandTo18Decimals(100), // stakingReward
         expandTo18Decimals(300), // feeReward
-        aliceSignaturePeriod1 // signature
-      )
+        aliceSignaturePeriod1, // signature
+      ),
     ).to.revertedWith("RewardSystem: invalid signature");
 
     // Wrong signer
@@ -250,15 +250,15 @@ describe("RewardSystem", function () {
         1, // periodId
         expandTo18Decimals(100), // stakingReward
         expandTo18Decimals(200), // feeReward
-        fakeSignature // signature
-      )
+        fakeSignature, // signature
+      ),
     ).to.revertedWith("RewardSystem: invalid signature");
   });
 
   it("cannot claim reward before period ends", async () => {
     await setNextBlockTimestamp(
       ethers.provider,
-      getPeriodEndTime(1).minus({ seconds: 1 })
+      getPeriodEndTime(1).minus({ seconds: 1 }),
     );
 
     await expect(
@@ -266,8 +266,8 @@ describe("RewardSystem", function () {
         1, // periodId
         expandTo18Decimals(100), // stakingReward
         expandTo18Decimals(200), // feeReward
-        aliceSignaturePeriod1 // signature
-      )
+        aliceSignaturePeriod1, // signature
+      ),
     ).to.revertedWith("RewardSystem: period not ended");
   });
 
@@ -279,8 +279,8 @@ describe("RewardSystem", function () {
         1, // periodId
         expandTo18Decimals(100), // stakingReward
         expandTo18Decimals(200), // feeReward
-        aliceSignaturePeriod1 // signature
-      )
+        aliceSignaturePeriod1, // signature
+      ),
     ).to.revertedWith("RewardSystem: reward expired");
   });
 
@@ -295,8 +295,8 @@ describe("RewardSystem", function () {
         1, // periodId
         expandTo18Decimals(100), // stakingReward
         expandTo18Decimals(200), // feeReward
-        aliceSignaturePeriod1 // signature
-      )
+        aliceSignaturePeriod1, // signature
+      ),
     ).to.revertedWith("RewardSystem: below target ratio");
   });
 
@@ -307,7 +307,7 @@ describe("RewardSystem", function () {
       1, // periodId
       expandTo18Decimals(100), // stakingReward
       expandTo18Decimals(200), // feeReward
-      aliceSignaturePeriod1 // signature
+      aliceSignaturePeriod1, // signature
     );
 
     await expect(
@@ -315,8 +315,8 @@ describe("RewardSystem", function () {
         1, // periodId
         expandTo18Decimals(100), // stakingReward
         expandTo18Decimals(200), // feeReward
-        aliceSignaturePeriod1 // signature
-      )
+        aliceSignaturePeriod1, // signature
+      ),
     ).to.revertedWith("RewardSystem: reward already claimed");
   });
 });

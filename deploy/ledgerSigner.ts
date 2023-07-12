@@ -14,7 +14,7 @@ export default class LedgerSigner extends Signer {
   constructor(
     path: string,
     provider?: providers.Provider,
-    verbose: boolean = false
+    verbose: boolean = false,
   ) {
     super();
 
@@ -51,7 +51,7 @@ export default class LedgerSigner extends Signer {
     }
 
     const sig = await this.retry((eth) =>
-      eth.signPersonalMessage(this.path, messageHex)
+      eth.signPersonalMessage(this.path, messageHex),
     );
     sig.r = "0x" + sig.r;
     sig.s = "0x" + sig.s;
@@ -59,7 +59,7 @@ export default class LedgerSigner extends Signer {
   }
 
   public async signTransaction(
-    transaction: Deferrable<TransactionRequest>
+    transaction: Deferrable<TransactionRequest>,
   ): Promise<string> {
     const tx = await utils.resolveProperties(transaction);
     const baseTx: utils.UnsignedTransaction = {
@@ -85,7 +85,7 @@ export default class LedgerSigner extends Signer {
     }
 
     const sig = await this.retry((eth) =>
-      eth.signTransaction(this.path, unsignedTx)
+      eth.signTransaction(this.path, unsignedTx),
     );
 
     return utils.serializeTransaction(baseTx, {
