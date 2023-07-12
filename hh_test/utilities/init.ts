@@ -630,7 +630,7 @@ export const deployAthosStack = async (
   await wbtcCollateralSystem.connect(deployer).updateTokenInfo(
     formatBytes32String("WBTC"), // _currency
     wbtcToken.address, // _tokenAddr
-    0_00010000, // _minCollateral
+    10000, // _minCollateral
     false // _disabled
   );
 
