@@ -22,10 +22,10 @@ describe("OracleRouter", function () {
   const assertPriceAndUpdateTime = async (
     currency: string,
     price: number | BigNumber,
-    upateTime: number | BigNumber
+    upateTime: number | BigNumber,
   ): Promise<void> => {
     const priceAndUpdateTime = await oracleRouter.getPriceAndUpdatedTime(
-      formatBytes32String(currency) // currencyKey
+      formatBytes32String(currency), // currencyKey
     );
     expect(priceAndUpdateTime.price).to.equal(price);
     expect(priceAndUpdateTime.time).to.equal(upateTime);
@@ -36,7 +36,7 @@ describe("OracleRouter", function () {
 
     const OracleRouter = await ethers.getContractFactory("OracleRouter");
     const MockChainlinkAggregator = await ethers.getContractFactory(
-      "MockChainlinkAggregator"
+      "MockChainlinkAggregator",
     );
 
     oracleRouter = (await upgrades.deployProxy(OracleRouter, [], {
@@ -50,7 +50,7 @@ describe("OracleRouter", function () {
     await oracleRouter.connect(deployer).addChainlinkOracle(
       formatBytes32String("LINK"), // currencyKey
       chainlinkAggregator.address, // oracleAddress
-      false // removeExisting
+      false, // removeExisting
     );
 
     // 8 decimals
@@ -60,7 +60,7 @@ describe("OracleRouter", function () {
       expandToNDecimals(10, 8), // newAnswer
       100, // newStartedAt
       200, // newUpdatedAt
-      1 // newAnsweredInRound
+      1, // newAnsweredInRound
     );
     await assertPriceAndUpdateTime("LINK", expandTo18Decimals(10), 200);
 
@@ -71,7 +71,7 @@ describe("OracleRouter", function () {
       expandToNDecimals(10, 18), // newAnswer
       100, // newStartedAt
       200, // newUpdatedAt
-      1 // newAnsweredInRound
+      1, // newAnsweredInRound
     );
     await assertPriceAndUpdateTime("LINK", expandTo18Decimals(10), 200);
 
@@ -82,7 +82,7 @@ describe("OracleRouter", function () {
       expandToNDecimals(10, 20), // newAnswer
       100, // newStartedAt
       200, // newUpdatedAt
-      1 // newAnsweredInRound
+      1, // newAnsweredInRound
     );
     await assertPriceAndUpdateTime("LINK", expandTo18Decimals(10), 200);
   });
@@ -91,15 +91,15 @@ describe("OracleRouter", function () {
     await oracleRouter.connect(deployer).addTerminalPriceOracle(
       formatBytes32String("LINK"), // currencyKey
       getAddress(
-        hexlify(zeroPad(arrayify(expandTo18Decimals(999).toHexString()), 20))
+        hexlify(zeroPad(arrayify(expandTo18Decimals(999).toHexString()), 20)),
       ), // oracleAddress
-      false // removeExisting
+      false, // removeExisting
     );
 
     await assertPriceAndUpdateTime(
       "LINK",
       expandTo18Decimals(999),
-      (await getBlockDateTime(ethers.provider)).toSeconds()
+      (await getBlockDateTime(ethers.provider)).toSeconds(),
     );
   });
 });

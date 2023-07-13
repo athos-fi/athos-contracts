@@ -10,7 +10,7 @@ const runScript = async () => {
 
   const UniswapTwapOracle = await ethers.getContractFactory(
     "UniswapTwapOracle",
-    deployer
+    deployer,
   );
 
   await upgrades.upgradeProxy(
@@ -19,7 +19,7 @@ const runScript = async () => {
     {
       // We renamed `baseDecimals` to `quoteDecimals`
       unsafeAllowRenames: true,
-    }
+    },
   );
 };
 

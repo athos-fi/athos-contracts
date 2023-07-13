@@ -61,7 +61,7 @@ export default class TtySigner extends Signer {
   }
 
   public async signTransaction(
-    transaction: Deferrable<TransactionRequest>
+    transaction: Deferrable<TransactionRequest>,
   ): Promise<string> {
     const tx = await utils.resolveProperties(transaction);
     const baseTx: utils.UnsignedTransaction = {
@@ -99,7 +99,7 @@ export default class TtySigner extends Signer {
   }
 
   public async estimateGas(
-    transaction: Deferrable<TransactionRequest>
+    transaction: Deferrable<TransactionRequest>,
   ): Promise<BigNumber> {
     return BigNumber.from(8_000_000);
   }

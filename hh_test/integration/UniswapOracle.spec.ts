@@ -56,21 +56,21 @@ describe("Integration | UniswapOracle", function () {
     const UniswapV2Factory = new ContractFactory(
       UniswapV2FactoryArtifact.interface,
       UniswapV2FactoryArtifact.bytecode,
-      deployer
+      deployer,
     );
     const UniswapV2Router02 = new ContractFactory(
       UniswapV2Router02Artifact.interface,
       UniswapV2Router02Artifact.bytecode,
-      deployer
+      deployer,
     );
     const UniswapCheckpoints = await ethers.getContractFactory(
-      "UniswapCheckpoints"
+      "UniswapCheckpoints",
     );
     const UniswapCheckpointer = await ethers.getContractFactory(
-      "UniswapCheckpointer"
+      "UniswapCheckpointer",
     );
     const UniswapTwapOracle = await ethers.getContractFactory(
-      "UniswapTwapOracle"
+      "UniswapTwapOracle",
     );
     const OracleRouter = await ethers.getContractFactory("OracleRouter");
 
@@ -81,17 +81,17 @@ describe("Integration | UniswapOracle", function () {
       ],
       {
         initializer: "__AthToken_init",
-      }
+      },
     )) as AthToken;
     usdc = await MockUSDC.deploy();
     weth = await WETH9.deploy();
 
     uniswapFactory = (await UniswapV2Factory.deploy(
-      zeroAddress
+      zeroAddress,
     )) as IUniswapV2Factory;
     uniswapRouter = (await UniswapV2Router02.deploy(
       uniswapFactory.address,
-      weth.address
+      weth.address,
     )) as IUniswapV2Router02;
     uniswapCheckpoints = (await upgrades.deployProxy(
       UniswapCheckpoints,
@@ -100,7 +100,7 @@ describe("Integration | UniswapOracle", function () {
       ],
       {
         initializer: "__UniswapCheckpoints_init",
-      }
+      },
     )) as UniswapCheckpoints;
     uniswapCheckpointer = (await upgrades.deployProxy(
       UniswapCheckpointer,
@@ -109,7 +109,7 @@ describe("Integration | UniswapOracle", function () {
       ],
       {
         initializer: "__UniswapCheckpointer_init",
-      }
+      },
     )) as UniswapCheckpointer;
     uniswapTwapOracle = (await upgrades.deployProxy(
       UniswapTwapOracle,
@@ -123,7 +123,7 @@ describe("Integration | UniswapOracle", function () {
       ],
       {
         initializer: "__UniswapTwapOracle_init",
-      }
+      },
     )) as UniswapTwapOracle;
     oracleRouter = (await upgrades.deployProxy(OracleRouter, [], {
       initializer: "__OracleRouter_init",
@@ -134,7 +134,7 @@ describe("Integration | UniswapOracle", function () {
       .addUniswapTwapOracle(
         formatBytes32String("ATH"),
         uniswapTwapOracle.address,
-        false
+        false,
       );
 
     await uniswapCheckpoints
@@ -160,7 +160,7 @@ describe("Integration | UniswapOracle", function () {
       uint256Max, // deadline
       {
         value: expandTo18Decimals(1),
-      }
+      },
     );
 
     // ATH-ETH pool (1 ETH = 200,000 ATH) (1 ATH = 0.000005 ETH) (1 ATH = $0.01)
@@ -173,7 +173,7 @@ describe("Integration | UniswapOracle", function () {
       uint256Max, // deadline
       {
         value: expandTo18Decimals(1),
-      }
+      },
     );
   });
 
@@ -183,26 +183,26 @@ describe("Integration | UniswapOracle", function () {
       .connect(deployer)
       .makeCheckpoints(
         [athToken.address, weth.address],
-        [weth.address, usdc.address]
+        [weth.address, usdc.address],
       );
 
     const lastCheckpointTimestamp = await getBlockDateTime(ethers.provider);
     await setNextBlockTimestamp(
       ethers.provider,
-      lastCheckpointTimestamp.plus({ minutes: 5 })
+      lastCheckpointTimestamp.plus({ minutes: 5 }),
     );
 
     await expect(uniswapTwapOracle.connect(deployer).observePrice())
       .to.emit(uniswapTwapOracle, "PriceUpdated")
       .withArgs(
-        expandTo18Decimals(0.01) // price
+        expandTo18Decimals(0.01), // price
       );
 
     const latestPrice = await uniswapTwapOracle.getLatestPrice();
     expect(latestPrice.price).to.equal(expandTo18Decimals(0.01));
 
     expect(await oracleRouter.getPrice(formatBytes32String("ATH"))).to.equal(
-      expandTo18Decimals(0.01)
+      expandTo18Decimals(0.01),
     );
 
     // Can't update price if out of range
@@ -210,13 +210,13 @@ describe("Integration | UniswapOracle", function () {
       .connect(deployer)
       .setPriceRange(expandTo18Decimals(0.02), expandTo18Decimals(0.1));
     await expect(
-      uniswapTwapOracle.connect(deployer).observePrice()
+      uniswapTwapOracle.connect(deployer).observePrice(),
     ).to.be.revertedWith("UniswapTwapOracle: price too low");
     await uniswapTwapOracle
       .connect(deployer)
       .setPriceRange(expandTo18Decimals(0.005), expandTo18Decimals(0.008));
     await expect(
-      uniswapTwapOracle.connect(deployer).observePrice()
+      uniswapTwapOracle.connect(deployer).observePrice(),
     ).to.be.revertedWith("UniswapTwapOracle: price too high");
   });
 });

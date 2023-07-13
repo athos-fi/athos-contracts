@@ -33,20 +33,20 @@ describe("Integration | Multicollateral", function () {
 
   const setAthPrice = async (price: number): Promise<void> => {
     await stack.athOracle.connect(deployer).setPrice(
-      expandTo8Decimals(price) // price
+      expandTo8Decimals(price), // price
     );
   };
 
   const setWbtcPrice = async (price: number): Promise<void> => {
     await stack.wbtcOracle.connect(deployer).setPrice(
-      expandTo8Decimals(price) // price
+      expandTo8Decimals(price), // price
     );
   };
 
   const assertDebtBalance = async (
     user: string,
     collateral: CollateralType,
-    amount: BigNumberish
+    amount: BigNumberish,
   ) => {
     let debtSystem: IDebtSystem;
     switch (collateral) {
@@ -60,7 +60,7 @@ describe("Integration | Multicollateral", function () {
         throw new Error("Unknown collateral type");
     }
     expect((await debtSystem.GetUserDebtBalanceInUsd(user))[0]).to.equal(
-      amount
+      amount,
     );
   };
 
@@ -94,53 +94,53 @@ describe("Integration | Multicollateral", function () {
     it("can stake and unstake WBTC", async function () {
       // Alice has 10 WBTC
       expect(
-        await stack.collaterals.wbtc.token.balanceOf(alice.address)
+        await stack.collaterals.wbtc.token.balanceOf(alice.address),
       ).to.equal(expandTo8Decimals(10));
       expect(
         await stack.collaterals.wbtc.token.balanceOf(
-          stack.collaterals.wbtc.collateralSystem.address
-        )
+          stack.collaterals.wbtc.collateralSystem.address,
+        ),
       ).to.equal(0);
 
       // Alice stakes 3 WBTC
       await stack.collaterals.wbtc.collateralSystem.connect(alice).Collateral(
         formatBytes32String("WBTC"), // _currency
-        expandTo8Decimals(3) // _amount
+        expandTo8Decimals(3), // _amount
       );
       expect(
-        await stack.collaterals.wbtc.token.balanceOf(alice.address)
+        await stack.collaterals.wbtc.token.balanceOf(alice.address),
       ).to.equal(expandTo8Decimals(7));
       expect(
         await stack.collaterals.wbtc.token.balanceOf(
-          stack.collaterals.wbtc.collateralSystem.address
-        )
+          stack.collaterals.wbtc.collateralSystem.address,
+        ),
       ).to.equal(expandTo8Decimals(3));
 
       // Alice unstakes 1 WBTC
       await stack.collaterals.wbtc.collateralSystem.connect(alice).Redeem(
         formatBytes32String("WBTC"), // _currency
-        expandTo8Decimals(1) // _amount
+        expandTo8Decimals(1), // _amount
       );
       expect(
-        await stack.collaterals.wbtc.token.balanceOf(alice.address)
+        await stack.collaterals.wbtc.token.balanceOf(alice.address),
       ).to.equal(expandTo8Decimals(8));
       expect(
         await stack.collaterals.wbtc.token.balanceOf(
-          stack.collaterals.wbtc.collateralSystem.address
-        )
+          stack.collaterals.wbtc.collateralSystem.address,
+        ),
       ).to.equal(expandTo8Decimals(2));
 
       // Alice unstakes everything
       await stack.collaterals.wbtc.collateralSystem.connect(alice).RedeemMax(
-        formatBytes32String("WBTC") // _currency
+        formatBytes32String("WBTC"), // _currency
       );
       expect(
-        await stack.collaterals.wbtc.token.balanceOf(alice.address)
+        await stack.collaterals.wbtc.token.balanceOf(alice.address),
       ).to.equal(expandTo8Decimals(10));
       expect(
         await stack.collaterals.wbtc.token.balanceOf(
-          stack.collaterals.wbtc.collateralSystem.address
-        )
+          stack.collaterals.wbtc.collateralSystem.address,
+        ),
       ).to.equal(0);
     });
   });
@@ -150,13 +150,13 @@ describe("Integration | Multicollateral", function () {
       // Alice stakes 10,000 ATH
       await stack.collaterals.ath.collateralSystem.connect(alice).Collateral(
         formatBytes32String("ATH"), // _currency
-        expandTo18Decimals(10_000) // _amount
+        expandTo18Decimals(10_000), // _amount
       );
 
       // Alice stakes 1 WBTC
       await stack.collaterals.wbtc.collateralSystem.connect(alice).Collateral(
         formatBytes32String("WBTC"), // _currency
-        expandTo8Decimals(1) // _amount
+        expandTo8Decimals(1), // _amount
       );
     });
 
@@ -168,17 +168,17 @@ describe("Integration | Multicollateral", function () {
       // Trying to build 10001 athUSD will fail
       await expect(
         stack.collaterals.wbtc.buildBurnSystem.connect(alice).BuildAsset(
-          expandTo18Decimals(10_001) // amount
-        )
+          expandTo18Decimals(10_001), // amount
+        ),
       ).to.revertedWith("Build amount too big, you need more collateral");
 
       // Building 10000 athUSD works
       await stack.collaterals.wbtc.buildBurnSystem.connect(alice).BuildAsset(
-        expandTo18Decimals(10_000) // amount
+        expandTo18Decimals(10_000), // amount
       );
 
       expect(await stack.ausdToken.balanceOf(alice.address)).to.equal(
-        expandTo18Decimals(10_000)
+        expandTo18Decimals(10_000),
       );
     });
 
@@ -191,17 +191,17 @@ describe("Integration | Multicollateral", function () {
           (await getBlockDateTime(ethers.provider))
             .plus({ years: 1 })
             .toSeconds(),
-        ] // _lockTo
+        ], // _lockTo
       );
 
       // Alice can still only build 10,000 athUSD
       await expect(
         stack.collaterals.wbtc.buildBurnSystem.connect(alice).BuildAsset(
-          expandTo18Decimals(10_001) // amount
-        )
+          expandTo18Decimals(10_001), // amount
+        ),
       ).to.revertedWith("Build amount too big, you need more collateral");
       await stack.collaterals.wbtc.buildBurnSystem.connect(alice).BuildAsset(
-        expandTo18Decimals(10_000) // amount
+        expandTo18Decimals(10_000), // amount
       );
     });
 
@@ -211,22 +211,22 @@ describe("Integration | Multicollateral", function () {
 
       // Alice builds 10 athUSD from ATH
       await stack.collaterals.ath.buildBurnSystem.connect(alice).BuildAsset(
-        expandTo18Decimals(10) // amount
+        expandTo18Decimals(10), // amount
       );
 
       // athUSD token balance increases
       expect(await stack.ausdToken.balanceOf(alice.address)).to.equal(
-        expandTo18Decimals(10)
+        expandTo18Decimals(10),
       );
 
       // Alice builds 20 athUSD from WBTC
       await stack.collaterals.wbtc.buildBurnSystem.connect(alice).BuildAsset(
-        expandTo18Decimals(20) // amount
+        expandTo18Decimals(20), // amount
       );
 
       // The same athUSD token balance increases
       expect(await stack.ausdToken.balanceOf(alice.address)).to.equal(
-        expandTo18Decimals(30)
+        expandTo18Decimals(30),
       );
     });
 
@@ -237,32 +237,32 @@ describe("Integration | Multicollateral", function () {
 
       // Alice builds 10 athUSD from ATH
       await stack.collaterals.ath.buildBurnSystem.connect(alice).BuildAsset(
-        expandTo18Decimals(10) // amount
+        expandTo18Decimals(10), // amount
       );
 
       // ATH debt increases
       await assertDebtBalance(
         alice.address,
         CollateralType.ATH,
-        expandTo18Decimals(10)
+        expandTo18Decimals(10),
       );
       await assertDebtBalance(alice.address, CollateralType.WBTC, 0);
 
       // Alice builds 20 athUSD from WBTC
       await stack.collaterals.wbtc.buildBurnSystem.connect(alice).BuildAsset(
-        expandTo18Decimals(20) // amount
+        expandTo18Decimals(20), // amount
       );
 
       // WBTC debt increases
       await assertDebtBalance(
         alice.address,
         CollateralType.ATH,
-        expandTo18Decimals(10)
+        expandTo18Decimals(10),
       );
       await assertDebtBalance(
         alice.address,
         CollateralType.WBTC,
-        expandTo18Decimals(20)
+        expandTo18Decimals(20),
       );
     });
   });
@@ -273,18 +273,18 @@ describe("Integration | Multicollateral", function () {
     // Helper functions
     const setLbtcPrice = async (price: number): Promise<void> => {
       await stack.abtcOracle.connect(deployer).setPrice(
-        expandTo8Decimals(price) // price
+        expandTo8Decimals(price), // price
       );
     };
     const passSettlementDelay = async (): Promise<void> => {
       await setNextBlockTimestamp(
         ethers.provider,
-        (await getBlockDateTime(ethers.provider)).plus(settlementDelay)
+        (await getBlockDateTime(ethers.provider)).plus(settlementDelay),
       );
     };
     const settleTrade = (entryId: number): Promise<any> => {
       return stack.exchangeSystem.connect(deployer).settle(
-        entryId // pendingExchangeEntryId
+        entryId, // pendingExchangeEntryId
       );
     };
     const settleTradeWithDelay = async (entryId: number): Promise<any> => {
@@ -296,29 +296,29 @@ describe("Integration | Multicollateral", function () {
       // Alice stakes 10,000 ATH and 1 WBTC
       await stack.collaterals.ath.collateralSystem.connect(alice).Collateral(
         formatBytes32String("ATH"), // _currency
-        expandTo18Decimals(10_000) // _amount
+        expandTo18Decimals(10_000), // _amount
       );
       await stack.collaterals.wbtc.collateralSystem.connect(alice).Collateral(
         formatBytes32String("WBTC"), // _currency
-        expandTo8Decimals(1) // _amount
+        expandTo8Decimals(1), // _amount
       );
 
       // Alice builds 10 athUSD from ATH and 20 athUSD from WBTC
       await stack.collaterals.ath.buildBurnSystem.connect(alice).BuildAsset(
-        expandTo18Decimals(10) // amount
+        expandTo18Decimals(10), // amount
       );
       await stack.collaterals.wbtc.buildBurnSystem.connect(alice).BuildAsset(
-        expandTo18Decimals(20) // amount
+        expandTo18Decimals(20), // amount
       );
 
       // Set settlement delay
       await stack.config.connect(deployer).setUint(
         formatBytes32String("TradeSettlementDelay"), // key
-        settlementDelay.as("seconds")
+        settlementDelay.as("seconds"),
       );
       await stack.config.connect(deployer).setUint(
         formatBytes32String("TradeRevertDelay"), // key
-        Duration.fromObject({ years: 1 }).as("seconds")
+        Duration.fromObject({ years: 1 }).as("seconds"),
       );
 
       // Set lBTC price to $20,000
@@ -329,7 +329,7 @@ describe("Integration | Multicollateral", function () {
         formatBytes32String("athUSD"), // sourceKey
         expandTo18Decimals(10), // sourceAmount
         alice.address, // destAddr
-        formatBytes32String("aBTC") // destKey
+        formatBytes32String("aBTC"), // destKey
       );
       await settleTradeWithDelay(1);
     });
@@ -338,12 +338,12 @@ describe("Integration | Multicollateral", function () {
       await assertDebtBalance(
         alice.address,
         CollateralType.ATH,
-        expandTo18Decimals(10)
+        expandTo18Decimals(10),
       );
       await assertDebtBalance(
         alice.address,
         CollateralType.WBTC,
-        expandTo18Decimals(20)
+        expandTo18Decimals(20),
       );
     });
 
@@ -362,12 +362,12 @@ describe("Integration | Multicollateral", function () {
       await assertDebtBalance(
         alice.address,
         CollateralType.ATH,
-        expandTo18Decimals(20)
+        expandTo18Decimals(20),
       );
       await assertDebtBalance(
         alice.address,
         CollateralType.WBTC,
-        expandTo18Decimals(40)
+        expandTo18Decimals(40),
       );
     });
 
@@ -386,12 +386,12 @@ describe("Integration | Multicollateral", function () {
       await assertDebtBalance(
         alice.address,
         CollateralType.ATH,
-        expandTo18Decimals(7)
+        expandTo18Decimals(7),
       );
       await assertDebtBalance(
         alice.address,
         CollateralType.WBTC,
-        expandTo18Decimals(14)
+        expandTo18Decimals(14),
       );
     });
 
@@ -403,12 +403,12 @@ describe("Integration | Multicollateral", function () {
       await assertDebtBalance(
         alice.address,
         CollateralType.ATH,
-        expandTo18Decimals(7)
+        expandTo18Decimals(7),
       );
       await assertDebtBalance(
         alice.address,
         CollateralType.WBTC,
-        expandTo18Decimals(14)
+        expandTo18Decimals(14),
       );
 
       // Alice burns 2 lUSD of ATH debt
@@ -418,12 +418,12 @@ describe("Integration | Multicollateral", function () {
       await assertDebtBalance(
         alice.address,
         CollateralType.ATH,
-        expandTo18Decimals(5)
+        expandTo18Decimals(5),
       );
       await assertDebtBalance(
         alice.address,
         CollateralType.WBTC,
-        expandTo18Decimals(14)
+        expandTo18Decimals(14),
       );
 
       // Alice burns 4 lUSD of WBTC debt
@@ -433,12 +433,12 @@ describe("Integration | Multicollateral", function () {
       await assertDebtBalance(
         alice.address,
         CollateralType.ATH,
-        expandTo18Decimals(5)
+        expandTo18Decimals(5),
       );
       await assertDebtBalance(
         alice.address,
         CollateralType.WBTC,
-        expandTo18Decimals(10)
+        expandTo18Decimals(10),
       );
     });
   });
@@ -452,19 +452,19 @@ describe("Integration | Multicollateral", function () {
       // Alice stakes 1,000 ATH and 1 WBTC
       await stack.collaterals.ath.collateralSystem.connect(alice).Collateral(
         formatBytes32String("ATH"), // _currency
-        expandTo18Decimals(1_000) // _amount
+        expandTo18Decimals(1_000), // _amount
       );
       await stack.collaterals.wbtc.collateralSystem.connect(alice).Collateral(
         formatBytes32String("WBTC"), // _currency
-        expandTo8Decimals(1) // _amount
+        expandTo8Decimals(1), // _amount
       );
 
       // Alice builds 20 athUSD from ATH and 20 athUSD from WBTC
       await stack.collaterals.ath.buildBurnSystem.connect(alice).BuildAsset(
-        expandTo18Decimals(20) // amount
+        expandTo18Decimals(20), // amount
       );
       await stack.collaterals.wbtc.buildBurnSystem.connect(alice).BuildAsset(
-        expandTo18Decimals(20) // amount
+        expandTo18Decimals(20), // amount
       );
     });
 
@@ -476,7 +476,7 @@ describe("Integration | Multicollateral", function () {
       await expect(
         stack.collaterals.wbtc.liquidation
           .connect(bob)
-          .markPositionAsUndercollateralized(alice.address)
+          .markPositionAsUndercollateralized(alice.address),
       ).to.be.revertedWith("Liquidation: not undercollateralized");
 
       // Price of WBTC drops such that C-ratio falls below liquidation ratio
@@ -486,24 +486,24 @@ describe("Integration | Multicollateral", function () {
       await expect(
         stack.collaterals.wbtc.liquidation
           .connect(bob)
-          .markPositionAsUndercollateralized(alice.address)
+          .markPositionAsUndercollateralized(alice.address),
       )
         .to.emit(stack.collaterals.wbtc.liquidation, "PositionMarked")
         .withArgs(
           alice.address, // user
-          bob.address // marker
+          bob.address, // marker
         );
 
       // Confirm mark
       expect(
         await stack.collaterals.wbtc.liquidation.isPositionMarkedAsUndercollateralized(
-          alice.address
-        )
+          alice.address,
+        ),
       ).to.equal(true);
       expect(
         await stack.collaterals.wbtc.liquidation.getUndercollateralizationMarkMarker(
-          alice.address
-        )
+          alice.address,
+        ),
       ).to.equal(bob.address);
     });
 
@@ -518,7 +518,7 @@ describe("Integration | Multicollateral", function () {
       await expect(
         stack.collaterals.ath.liquidation
           .connect(bob)
-          .markPositionAsUndercollateralized(alice.address)
+          .markPositionAsUndercollateralized(alice.address),
       ).to.be.revertedWith("Liquidation: not undercollateralized");
     });
 
@@ -533,7 +533,7 @@ describe("Integration | Multicollateral", function () {
       await expect(
         stack.collaterals.wbtc.liquidation
           .connect(bob)
-          .markPositionAsUndercollateralized(alice.address)
+          .markPositionAsUndercollateralized(alice.address),
       ).to.be.revertedWith("Liquidation: not undercollateralized");
     });
   });

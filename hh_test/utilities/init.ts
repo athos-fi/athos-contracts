@@ -72,62 +72,62 @@ export interface CollateralContracts {
 }
 
 export const deployAthosStack = async (
-  deployer: SignerWithAddress
+  deployer: SignerWithAddress,
 ): Promise<DeployedStack> => {
   // Load contract factories
   const AthToken = await ethers.getContractFactory("AthToken", deployer);
   const AccessController = await ethers.getContractFactory(
     "AccessController",
-    deployer
+    deployer,
   );
   const Config = await ethers.getContractFactory("Config", deployer);
   const Asset = await ethers.getContractFactory("Asset", deployer);
   const OracleRouter = await ethers.getContractFactory(
     "OracleRouter",
-    deployer
+    deployer,
   );
   const AssetRegistry = await ethers.getContractFactory(
     "AssetRegistry",
-    deployer
+    deployer,
   );
   const DebtSystem = await ethers.getContractFactory("DebtSystem", deployer);
   const DebtDistribution = await ethers.getContractFactory(
     "DebtDistribution",
-    deployer
+    deployer,
   );
   const BuildBurnSystem = await ethers.getContractFactory(
     "BuildBurnSystem",
-    deployer
+    deployer,
   );
   const CollateralSystem = await ethers.getContractFactory(
     "CollateralSystem",
-    deployer
+    deployer,
   );
   const RewardLocker = await ethers.getContractFactory(
     "RewardLocker",
-    deployer
+    deployer,
   );
   const RewardSystem = await ethers.getContractFactory(
     "RewardSystem",
-    deployer
+    deployer,
   );
   const Liquidation = await ethers.getContractFactory("Liquidation", deployer);
   const ExchangeSystem = await ethers.getContractFactory(
     "ExchangeSystem",
-    deployer
+    deployer,
   );
   const PerpPositionToken = await ethers.getContractFactory(
     "PerpPositionToken",
-    deployer
+    deployer,
   );
   const Perpetual = await ethers.getContractFactory("Perpetual", deployer);
   const PerpExchange = await ethers.getContractFactory(
     "PerpExchange",
-    deployer
+    deployer,
   );
   const MockChainlinkAggregator = await ethers.getContractFactory(
     "MockChainlinkAggregator",
-    deployer
+    deployer,
   );
   const MockERC20 = await ethers.getContractFactory("MockERC20", deployer);
 
@@ -138,13 +138,13 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__AthToken_init",
-    }
+    },
   )) as AthToken;
 
   const wbtcToken = await MockERC20.deploy(
     "Wrapped BTC", // _name
     "WBTC", // _symbol
-    8 // _decimals
+    8, // _decimals
   );
 
   const accessController: AccessController = (await upgrades.deployProxy(
@@ -152,7 +152,7 @@ export const deployAthosStack = async (
     [],
     {
       initializer: "__AccessController_init",
-    }
+    },
   )) as AccessController;
 
   const config: Config = (await upgrades.deployProxy(Config, [], {
@@ -169,7 +169,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__Asset_init",
-    }
+    },
   )) as Asset;
 
   const oracleRouter: OracleRouter = (await upgrades.deployProxy(
@@ -177,7 +177,7 @@ export const deployAthosStack = async (
     [],
     {
       initializer: "__OracleRouter_init",
-    }
+    },
   )) as OracleRouter;
 
   const assetRegistry: AssetRegistry = (await upgrades.deployProxy(
@@ -187,7 +187,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__AssetRegistry_init",
-    }
+    },
   )) as AssetRegistry;
 
   const debtDistribution: DebtDistribution = (await upgrades.deployProxy(
@@ -197,7 +197,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__DebtDistribution_init",
-    }
+    },
   )) as DebtDistribution;
 
   const athDebtSystem: DebtSystem = (await upgrades.deployProxy(
@@ -208,7 +208,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__DebtSystem_init",
-    }
+    },
   )) as DebtSystem;
 
   const wbtcDebtSystem: DebtSystem = (await upgrades.deployProxy(
@@ -219,7 +219,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__DebtSystem_init",
-    }
+    },
   )) as DebtSystem;
 
   const athBuildBurnSystem: BuildBurnSystem = (await upgrades.deployProxy(
@@ -234,7 +234,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__BuildBurnSystem_init",
-    }
+    },
   )) as BuildBurnSystem;
 
   const wbtcBuildBurnSystem: BuildBurnSystem = (await upgrades.deployProxy(
@@ -249,7 +249,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__BuildBurnSystem_init",
-    }
+    },
   )) as BuildBurnSystem;
 
   const athCollateralSystem: CollateralSystem = (await upgrades.deployProxy(
@@ -264,7 +264,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__CollateralSystem_init",
-    }
+    },
   )) as CollateralSystem;
 
   const wbtcCollateralSystem: CollateralSystem = (await upgrades.deployProxy(
@@ -279,7 +279,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__CollateralSystem_init",
-    }
+    },
   )) as CollateralSystem;
 
   const rewardLocker: RewardLocker = (await upgrades.deployProxy(
@@ -290,15 +290,13 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__RewardLocker_init",
-    }
+    },
   )) as RewardLocker;
 
   const rewardSystem: RewardSystem = (await upgrades.deployProxy(
     RewardSystem,
     [
-      (
-        await ethers.provider.getBlock("latest")
-      ).timestamp, // _firstPeriodStartTime
+      (await ethers.provider.getBlock("latest")).timestamp, // _firstPeriodStartTime
       [MOCK_ADDRESS, "0xffffffffffffffffffffffffffffffffffffffff"], // _rewardSigners
       ausdToken.address, // _lusdAddress
       athCollateralSystem.address, // _collateralSystemAddress
@@ -306,7 +304,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__RewardSystem_init",
-    }
+    },
   )) as RewardSystem;
 
   const athLiquidation: Liquidation = (await upgrades.deployProxy(
@@ -321,7 +319,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__Liquidation_init",
-    }
+    },
   )) as Liquidation;
 
   // We leave _rewardLocker as MOCK_ADDRESS because it's useless for non-native colalterals.
@@ -337,7 +335,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__Liquidation_init",
-    }
+    },
   )) as Liquidation;
 
   const exchangeSystem: ExchangeSystem = (await upgrades.deployProxy(
@@ -350,7 +348,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__ExchangeSystem_init",
-    }
+    },
   )) as ExchangeSystem;
 
   const perpPositionToken: PerpPositionToken = (await upgrades.deployProxy(
@@ -358,7 +356,7 @@ export const deployAthosStack = async (
     [],
     {
       initializer: "__PerpPositionToken_init",
-    }
+    },
   )) as PerpPositionToken;
 
   const perpExchange: PerpExchange = (await upgrades.deployProxy(
@@ -372,7 +370,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__PerpExchange_init",
-    }
+    },
   )) as PerpExchange;
 
   // Fix circular dependencies.
@@ -452,7 +450,7 @@ export const deployAthosStack = async (
   ])
     await config.connect(deployer).setUint(
       ethers.utils.formatBytes32String(item.key), // key
-      item.value // value
+      item.value, // value
     );
 
   /**
@@ -488,7 +486,7 @@ export const deployAthosStack = async (
   ])
     await config.connect(deployer).setUint(
       ethers.utils.formatBytes32String(item.key), // key
-      item.value // value
+      item.value, // value
     );
 
   /**
@@ -586,7 +584,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__Asset_init",
-    }
+    },
   )) as Asset;
 
   /**
@@ -608,7 +606,7 @@ export const deployAthosStack = async (
     ],
     {
       initializer: "__Perpetual_init",
-    }
+    },
   )) as Perpetual;
 
   /**
@@ -625,13 +623,13 @@ export const deployAthosStack = async (
     formatBytes32String("ATH"), // _currency
     athToken.address, // _tokenAddr
     expandTo18Decimals(1), // _minCollateral
-    false // _disabled
+    false, // _disabled
   );
   await wbtcCollateralSystem.connect(deployer).updateTokenInfo(
     formatBytes32String("WBTC"), // _currency
     wbtcToken.address, // _tokenAddr
     10000, // _minCollateral
-    false // _disabled
+    false, // _disabled
   );
 
   // Link `DebtSystem` instances to `DebtDistribution`
