@@ -327,7 +327,7 @@ contract RewardLockerV3 is IRewardLocker, OwnableUpgradeable {
 
     function updateAirdropUnlockTime(uint256[] memory firstEntryIds, address[] memory users) 
         external
-        onlyUpdateUnlockTimeRole 
+        onlyUpdateUnlockTimeRole
     {
         require(firstEntryIds.length == users.length, "RewardLocker: mismatch lengths");
         uint256 length = firstEntryIds.length;
