@@ -334,7 +334,6 @@ contract RewardLockerV3 is IRewardLocker, OwnableUpgradeable {
         for (uint256 i; i < length; i++) {
             for (uint256 j; j < 26; j++) {
                 uint256 unlockTime = rewardEntries[firstEntryIds[i] + j][users[i]].unlockTime;
-                require(unlockTime != 0, "RewardLocker: invalid unlockTime");
                 rewardEntries[firstEntryIds[i] + j][users[i]].unlockTime = uint40(unlockTime + 52 weeks);
             }
         }
