@@ -70,7 +70,7 @@ export class StackManager {
   saveStack() {
     fs.writeFileSync(
       this.stackFile,
-      JSON.stringify(this.stack, undefined, 2) + os.EOL,
+      JSON.stringify(this.stack, undefined, 2) + os.EOL
     );
   }
 }

@@ -29,7 +29,7 @@ describe("Integration | Unlock Reward", function () {
     periodId: BigNumber,
     recipient: string,
     stakingReward: BigNumber,
-    feeReward: BigNumber,
+    feeReward: BigNumber
   ): Promise<string[]> => {
     const domain = {
       name: "Athos",
@@ -55,7 +55,7 @@ describe("Integration | Unlock Reward", function () {
     };
 
     return await Promise.all(
-      signers.map((signer) => signer._signTypedData(domain, types, value)),
+      signers.map((signer) => signer._signTypedData(domain, types, value))
     );
   };
 
@@ -65,7 +65,7 @@ describe("Integration | Unlock Reward", function () {
     rewardSigner2 = Wallet.createRandom();
     if (
       BigNumber.from(rewardSigner1.address).gt(
-        BigNumber.from(rewardSigner2.address),
+        BigNumber.from(rewardSigner2.address)
       )
     ) {
       const temp = rewardSigner1;
@@ -104,7 +104,7 @@ describe("Integration | Unlock Reward", function () {
       BigNumber.from(1),
       alice.address,
       expandTo18Decimals(100),
-      BigNumber.from(0),
+      BigNumber.from(0)
     );
   });
 
@@ -112,14 +112,14 @@ describe("Integration | Unlock Reward", function () {
     // Alice stakes 9,000 ATH
     await stack.collaterals.ath.collateralSystem.connect(alice).Collateral(
       formatBytes32String("ATH"), // _currency
-      expandTo18Decimals(9_000), // _amount
+      expandTo18Decimals(9_000) // _amount
     );
 
     // Returns 9,000 when locked amount is zero
     expect(
       await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
-        alice.address, // user
-      ),
+        alice.address // user
+      )
     ).to.equal(expandTo18Decimals(9_000));
 
     // Fast forward to 1st period end
@@ -128,8 +128,8 @@ describe("Integration | Unlock Reward", function () {
     await setNextBlockTimestamp(
       ethers.provider,
       DateTime.fromSeconds(parseInt(rewardSystemFirstPeriod.toString())).plus(
-        periodDuration,
-      ),
+        periodDuration
+      )
     );
 
     // Alice claim reward
@@ -138,19 +138,19 @@ describe("Integration | Unlock Reward", function () {
         1, // periodId
         expandTo18Decimals(100), // stakingReward
         BigNumber.from(0), // feeReward
-        aliceSignaturePeriod1, // signature
-      ),
+        aliceSignaturePeriod1 // signature
+      )
     )
       .to.emit(stack.rewardSystem, "RewardClaimed")
       .withArgs(
         alice.address, // recipient
         1, // periodId
         expandTo18Decimals(100), // stakingReward
-        BigNumber.from(0), // feeReward
+        BigNumber.from(0) // feeReward
       );
 
     expect(
-      await stack.rewardLocker.lockedAmountByAddresses(alice.address),
+      await stack.rewardLocker.lockedAmountByAddresses(alice.address)
     ).to.equal(expandTo18Decimals(100));
 
     // Fast forward to unlock time
@@ -158,7 +158,7 @@ describe("Integration | Unlock Reward", function () {
       ethers.provider,
       DateTime.fromSeconds(parseInt(rewardSystemFirstPeriod.toString()))
         .plus(periodDuration)
-        .plus(stakingRewardLockTime),
+        .plus(stakingRewardLockTime)
     );
 
     // Approve lnCollateralSystem to spend ATH from rewarder
@@ -166,63 +166,63 @@ describe("Integration | Unlock Reward", function () {
       .connect(rewarder)
       .approve(
         stack.collaterals.ath.collateralSystem.address,
-        expandTo18Decimals(100),
+        expandTo18Decimals(100)
       );
 
     await expect(
       stack.rewardLocker.connect(rewardUnlocker).unlockReward(
         alice.address, // user
-        1, // rewardEntryId
-      ),
+        1 // rewardEntryId
+      )
     )
       .to.emit(stack.rewardLocker, "RewardEntryUnlocked")
       .withArgs(
         1, //entryId
         alice.address, // user
-        expandTo18Decimals(100), // amount
+        expandTo18Decimals(100) // amount
       )
       .to.emit(stack.collaterals.ath.collateralSystem, "CollateralUnlockReward")
       .withArgs(
         alice.address,
         formatBytes32String("ATH"),
         expandTo18Decimals(100),
-        expandTo18Decimals(9_100),
+        expandTo18Decimals(9_100)
       )
       .to.emit(stack.collaterals.ath.token, "Transfer")
       .withArgs(
         rewarder.address,
         stack.collaterals.ath.collateralSystem.address,
-        expandTo18Decimals(100),
+        expandTo18Decimals(100)
       );
 
     // Returns 9,000 when locked amount is zero
     expect(
       await stack.collaterals.ath.collateralSystem.maxRedeemableLina(
-        alice.address, // user
-      ),
+        alice.address // user
+      )
     ).to.equal(expandTo18Decimals(9_100));
 
     await expect(
       stack.collaterals.ath.collateralSystem
         .connect(alice)
-        .RedeemMax(formatBytes32String("ATH")),
+        .RedeemMax(formatBytes32String("ATH"))
     )
       .to.emit(stack.collaterals.ath.collateralSystem, "RedeemCollateral")
       .withArgs(
         alice.address,
         formatBytes32String("ATH"),
         expandTo18Decimals(9_100),
-        BigNumber.from("0"),
+        BigNumber.from("0")
       )
       .to.emit(stack.collaterals.ath.token, "Transfer")
       .withArgs(
         stack.collaterals.ath.collateralSystem.address,
         alice.address,
-        expandTo18Decimals(9_100),
+        expandTo18Decimals(9_100)
       );
 
     expect(await stack.collaterals.ath.token.balanceOf(alice.address)).to.eq(
-      expandTo18Decimals(990_100),
+      expandTo18Decimals(990_100)
     );
   });
 });

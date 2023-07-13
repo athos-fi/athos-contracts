@@ -15,13 +15,13 @@ const runScript = async () => {
 
   const config = Config__factory.connect(
     stackManager.getDeploymentChecked(DeploymentKey.Config).address,
-    deployer,
+    deployer
   );
 
   // Set athUSD exchange fee rate to 0.25%
   await config.connect(deployer).setUint(
     formatBytes32String("athUSD"), // key
-    expandTo18Decimals(0.0025), // value
+    expandTo18Decimals(0.0025) // value
   );
 };
 

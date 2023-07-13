@@ -19,15 +19,15 @@ const runScript = async () => {
 
   const AccessController = await ethers.getContractFactory(
     "AccessController",
-    deployer,
+    deployer
   );
   const AirdropDistributor = await ethers.getContractFactory(
     "AirdropDistributor",
-    deployer,
+    deployer
   );
   const RewardLocker = await ethers.getContractFactory(
     "RewardLocker",
-    deployer,
+    deployer
   );
 
   const athToken = stackManager.getDeploymentChecked(DeploymentKey.AthToken);
@@ -37,7 +37,7 @@ const runScript = async () => {
   })) as AccessController;
   stackManager.setDeployment(
     DeploymentKey.AccessController,
-    accessController.address,
+    accessController.address
   );
 
   const rewardLocker = (await upgrades.deployProxy(
@@ -48,7 +48,7 @@ const runScript = async () => {
     ],
     {
       initializer: "__RewardLocker_init",
-    },
+    }
   )) as RewardLocker;
   stackManager.setDeployment(DeploymentKey.RewardLocker, rewardLocker.address);
 
@@ -57,14 +57,14 @@ const runScript = async () => {
       AirdropDistributor,
       [
         DateTime.fromISO(
-          stackManager.config.airdrops[indAirdrop].startTime,
+          stackManager.config.airdrops[indAirdrop].startTime
         ).toSeconds(), // _startTime
         DateTime.fromISO(
-          stackManager.config.airdrops[indAirdrop].deadline,
+          stackManager.config.airdrops[indAirdrop].deadline
         ).toSeconds(), // _deadline
         0, // _unlockedPercentage
         DateTime.fromISO(
-          stackManager.config.airdrops[indAirdrop].firstUnlockTime,
+          stackManager.config.airdrops[indAirdrop].firstUnlockTime
         ).toSeconds(), // _firstUnlockTime
         stackManager.config.airdrops[indAirdrop].unlockIntervalSeconds, // _unlockInterval
         stackManager.config.airdrops[indAirdrop].unlockCount, // _unlockCount
@@ -73,18 +73,18 @@ const runScript = async () => {
       ],
       {
         initializer: "__AirdropDistributor_init",
-      },
+      }
     )) as AirdropDistributor;
     stackManager.setDeployment(
       `AirdropDistributor${indAirdrop + 1}` as DeploymentKey,
-      airdropDistributor.address,
+      airdropDistributor.address
     );
 
     await accessController
       .connect(deployer)
       .grantRole(
         formatBytes32String("LOCK_REWARD"),
-        airdropDistributor.address,
+        airdropDistributor.address
       );
   }
 };

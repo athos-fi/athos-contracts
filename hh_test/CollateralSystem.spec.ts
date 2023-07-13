@@ -24,7 +24,7 @@ describe("CollateralSystem", function () {
     [deployer, alice, rewarder, rewardLocker] = await ethers.getSigners();
 
     const CollateralSystem = await ethers.getContractFactory(
-      "CollateralSystem",
+      "CollateralSystem"
     );
     const AssetRegistry = await ethers.getContractFactory("AssetRegistry");
     const MockERC20 = await ethers.getContractFactory("MockERC20");
@@ -36,13 +36,13 @@ describe("CollateralSystem", function () {
       mockAddress, // _mConfig
       rewardLocker.address, // _mRewardLocker
       mockAddress, // _buildBurnSystem
-      mockAddress, // _liquidation
+      mockAddress // _liquidation
     );
 
     athToken = await MockERC20.deploy(
       "Athos Finance", // _name
       "ATH", // _symbol
-      18, // _decimals
+      18 // _decimals
     );
 
     assetRegistry = await AssetRegistry.deploy();
@@ -63,8 +63,8 @@ describe("CollateralSystem", function () {
           alice.address,
           rewarder.address,
           formatBytes32String("ATH"),
-          1,
-        ),
+          1
+        )
     ).to.be.revertedWith("CollateralSystem: not reward locker");
 
     await athToken.mint(rewarder.address, expandTo18Decimals(10));
@@ -78,14 +78,14 @@ describe("CollateralSystem", function () {
         alice.address,
         rewarder.address,
         formatBytes32String("ATH"),
-        expandTo18Decimals(10),
+        expandTo18Decimals(10)
       );
 
     expect(
       await collateralSystem.userCollateralData(
         alice.address,
-        formatBytes32String("ATH"),
-      ),
+        formatBytes32String("ATH")
+      )
     ).to.eq(expandTo18Decimals(10));
   });
 
@@ -98,11 +98,11 @@ describe("CollateralSystem", function () {
     expect(
       await collateralSystem.userCollateralData(
         alice.address,
-        formatBytes32String("ATH"),
-      ),
+        formatBytes32String("ATH")
+      )
     ).to.eq(BigNumber.from("0"));
     expect(await athToken.balanceOf(collateralSystem.address)).to.eq(
-      BigNumber.from("0"),
+      BigNumber.from("0")
     );
 
     await expect(
@@ -112,36 +112,36 @@ describe("CollateralSystem", function () {
           alice.address,
           rewarder.address,
           formatBytes32String("ATH"),
-          expandTo18Decimals(10),
-        ),
+          expandTo18Decimals(10)
+        )
     )
       .to.emit(collateralSystem, "CollateralUnlockReward")
       .withArgs(
         alice.address,
         formatBytes32String("ATH"),
         expandTo18Decimals(10),
-        expandTo18Decimals(10),
+        expandTo18Decimals(10)
       )
       .to.emit(athToken, "Transfer")
       .withArgs(
         rewarder.address,
         collateralSystem.address,
-        expandTo18Decimals(10),
+        expandTo18Decimals(10)
       );
 
     expect(
       await collateralSystem.userCollateralData(
         alice.address,
-        formatBytes32String("ATH"),
-      ),
+        formatBytes32String("ATH")
+      )
     ).to.eq(expandTo18Decimals(10));
     let tokeninfo = await collateralSystem.tokenInfos(
-      formatBytes32String("ATH"),
+      formatBytes32String("ATH")
     );
     expect(tokeninfo.totalCollateral).to.equal(expandTo18Decimals(10));
 
     expect(await athToken.balanceOf(collateralSystem.address)).to.eq(
-      expandTo18Decimals(10),
+      expandTo18Decimals(10)
     );
   });
 
@@ -153,14 +153,14 @@ describe("CollateralSystem", function () {
           "0x0000000000000000000000000000000000000000",
           rewarder.address,
           formatBytes32String("ATH"),
-          expandTo18Decimals(10),
-        ),
+          expandTo18Decimals(10)
+        )
     ).to.be.revertedWith("CollateralSystem: User address cannot be zero");
   });
 
   it("reward locker must pass a valid currency to collateralFromUnlockReward function", async () => {
     let ethTokeninfo = await collateralSystem.tokenInfos(
-      ethers.utils.formatBytes32String("ETH"),
+      ethers.utils.formatBytes32String("ETH")
     );
     expect(ethTokeninfo.tokenAddr).to.be.eq(zeroAddress);
 
@@ -171,12 +171,12 @@ describe("CollateralSystem", function () {
           alice.address,
           rewarder.address,
           ethers.utils.formatBytes32String("ETH"),
-          expandTo18Decimals(10),
-        ),
+          expandTo18Decimals(10)
+        )
     ).to.be.revertedWith("CollateralSystem: currency symbol mismatch");
 
     let athTokeninfo = await collateralSystem.tokenInfos(
-      formatBytes32String("ATH"),
+      formatBytes32String("ATH")
     );
     expect(athTokeninfo.tokenAddr).to.be.eq(athToken.address);
 
@@ -191,14 +191,14 @@ describe("CollateralSystem", function () {
         alice.address,
         rewarder.address,
         formatBytes32String("ATH"),
-        expandTo18Decimals(1),
+        expandTo18Decimals(1)
       );
 
     expect(
       await collateralSystem.userCollateralData(
         alice.address,
-        formatBytes32String("ATH"),
-      ),
+        formatBytes32String("ATH")
+      )
     ).to.eq(expandTo18Decimals(1));
   });
 
@@ -210,8 +210,8 @@ describe("CollateralSystem", function () {
           alice.address,
           rewarder.address,
           formatBytes32String("ATH"),
-          BigNumber.from(0),
-        ),
+          BigNumber.from(0)
+        )
     ).to.be.revertedWith("CollateralSystem: Collateral amount must be > 0");
 
     await athToken.mint(rewarder.address, expandTo18Decimals(1));
@@ -225,14 +225,14 @@ describe("CollateralSystem", function () {
         alice.address,
         rewarder.address,
         formatBytes32String("ATH"),
-        expandTo18Decimals(1),
+        expandTo18Decimals(1)
       );
 
     expect(
       await collateralSystem.userCollateralData(
         alice.address,
-        formatBytes32String("ATH"),
-      ),
+        formatBytes32String("ATH")
+      )
     ).to.eq(expandTo18Decimals(1));
   });
 
@@ -240,14 +240,14 @@ describe("CollateralSystem", function () {
     expect(
       await collateralSystem.userCollateralData(
         alice.address,
-        formatBytes32String("ATH"),
-      ),
+        formatBytes32String("ATH")
+      )
     ).to.eq(BigNumber.from("0"));
     expect(await athToken.balanceOf(collateralSystem.address)).to.eq(
-      BigNumber.from("0"),
+      BigNumber.from("0")
     );
     expect(await athToken.balanceOf(rewarder.address)).to.eq(
-      BigNumber.from("0"),
+      BigNumber.from("0")
     );
 
     await expect(
@@ -257,8 +257,8 @@ describe("CollateralSystem", function () {
           alice.address,
           rewarder.address,
           formatBytes32String("ATH"),
-          expandTo18Decimals(10),
-        ),
+          expandTo18Decimals(10)
+        )
     ).to.be.revertedWith("TransferHelper: transferFrom failed");
   });
 });

@@ -38,60 +38,60 @@ const runScript = async () => {
   const Asset = await ethers.getContractFactory("Asset", deployer);
   const OracleRouter = await ethers.getContractFactory(
     "OracleRouter",
-    deployer,
+    deployer
   );
   const AssetRegistry = await ethers.getContractFactory(
     "AssetRegistry",
-    deployer,
+    deployer
   );
   const DebtSystem = await ethers.getContractFactory("DebtSystem", deployer);
   const BuildBurnSystem = await ethers.getContractFactory(
     "BuildBurnSystem",
-    deployer,
+    deployer
   );
   const CollateralSystem = await ethers.getContractFactory(
     "CollateralSystem",
-    deployer,
+    deployer
   );
   const RewardSystem = await ethers.getContractFactory(
     "RewardSystem",
-    deployer,
+    deployer
   );
   const Liquidation = await ethers.getContractFactory("Liquidation", deployer);
   const ExchangeSystem = await ethers.getContractFactory(
     "ExchangeSystem",
-    deployer,
+    deployer
   );
   const PerpPositionToken = await ethers.getContractFactory(
     "PerpPositionToken",
-    deployer,
+    deployer
   );
   const Perpetual = await ethers.getContractFactory("Perpetual", deployer);
   const PerpExchange = await ethers.getContractFactory(
     "PerpExchange",
-    deployer,
+    deployer
   );
   const UniswapCheckpoints = await ethers.getContractFactory(
     "UniswapCheckpoints",
-    deployer,
+    deployer
   );
   const UniswapCheckpointer = await ethers.getContractFactory(
     "UniswapCheckpointer",
-    deployer,
+    deployer
   );
   const UniswapTwapOracle = await ethers.getContractFactory(
     "UniswapTwapOracle",
-    deployer,
+    deployer
   );
 
   const athToken = stackManager.getDeploymentChecked(DeploymentKey.AthToken);
   const accessController = AccessController__factory.connect(
     stackManager.getDeploymentChecked(DeploymentKey.AccessController).address,
-    deployer,
+    deployer
   );
   const rewardLocker = RewardLocker__factory.connect(
     stackManager.getDeploymentChecked(DeploymentKey.RewardLocker).address,
-    deployer,
+    deployer
   );
 
   const config = (await upgrades.deployProxy(Config, [], {
@@ -109,7 +109,7 @@ const runScript = async () => {
     ],
     {
       initializer: "__Asset_init",
-    },
+    }
   )) as Asset;
   stackManager.setDeployment(DeploymentKey.AthusdToken, athusdToken.address);
 
@@ -125,11 +125,11 @@ const runScript = async () => {
     ],
     {
       initializer: "__AssetRegistry_init",
-    },
+    }
   )) as AssetRegistry;
   stackManager.setDeployment(
     DeploymentKey.AssetRegistry,
-    assetRegistry.address,
+    assetRegistry.address
   );
 
   const debtSystem = (await upgrades.deployProxy(
@@ -140,7 +140,7 @@ const runScript = async () => {
     ],
     {
       initializer: "__DebtSystem_init",
-    },
+    }
   )) as DebtSystem;
   stackManager.setDeployment(DeploymentKey.DebtSystem, debtSystem.address);
 
@@ -156,11 +156,11 @@ const runScript = async () => {
     ],
     {
       initializer: "__BuildBurnSystem_init",
-    },
+    }
   )) as BuildBurnSystem;
   stackManager.setDeployment(
     DeploymentKey.BuildBurnSystem,
-    buildBurnSystem.address,
+    buildBurnSystem.address
   );
 
   const collateralSystem = (await upgrades.deployProxy(
@@ -175,18 +175,18 @@ const runScript = async () => {
     ],
     {
       initializer: "__CollateralSystem_init",
-    },
+    }
   )) as CollateralSystem;
   stackManager.setDeployment(
     DeploymentKey.CollateralSystem,
-    collateralSystem.address,
+    collateralSystem.address
   );
 
   const rewardSystem = (await upgrades.deployProxy(
     RewardSystem,
     [
       DateTime.fromISO(
-        stackManager.config.firstRewardPeriodStartTime,
+        stackManager.config.firstRewardPeriodStartTime
       ).toSeconds(), // _firstPeriodStartTime
       mockAddress, // _rewardSigner
       athusdToken.address, // _lusdAddress
@@ -195,7 +195,7 @@ const runScript = async () => {
     ],
     {
       initializer: "__RewardSystem_init",
-    },
+    }
   )) as RewardSystem;
   stackManager.setDeployment(DeploymentKey.RewardSystem, rewardSystem.address);
 
@@ -211,7 +211,7 @@ const runScript = async () => {
     ],
     {
       initializer: "__Liquidation_init",
-    },
+    }
   )) as Liquidation;
   stackManager.setDeployment(DeploymentKey.Liquidation, liquidation.address);
 
@@ -225,11 +225,11 @@ const runScript = async () => {
     ],
     {
       initializer: "__ExchangeSystem_init",
-    },
+    }
   )) as ExchangeSystem;
   stackManager.setDeployment(
     DeploymentKey.ExchangeSystem,
-    exchangeSystem.address,
+    exchangeSystem.address
   );
 
   const perpPositionToken = (await upgrades.deployProxy(PerpPositionToken, [], {
@@ -237,7 +237,7 @@ const runScript = async () => {
   })) as PerpPositionToken;
   stackManager.setDeployment(
     DeploymentKey.PerpPositionToken,
-    perpPositionToken.address,
+    perpPositionToken.address
   );
 
   const perpExchange = (await upgrades.deployProxy(
@@ -251,7 +251,7 @@ const runScript = async () => {
     ],
     {
       initializer: "__PerpExchange_init",
-    },
+    }
   )) as PerpExchange;
   stackManager.setDeployment(DeploymentKey.PerpExchange, perpExchange.address);
 
@@ -322,7 +322,7 @@ const runScript = async () => {
   ])
     await config.connect(deployer).setUint(
       formatBytes32String(item.key), // key
-      item.value, // value
+      item.value // value
     );
 
   /**
@@ -425,14 +425,14 @@ const runScript = async () => {
     formatBytes32String("ATH"), // _currency
     athToken.address, // _tokenAddr
     expandTo18Decimals(1), // _minCollateral
-    false, // _close
+    false // _close
   );
 
   /**
    * Set up oracles
    */
   await oracleRouter.connect(deployer).setGlobalStalePeriod(
-    Duration.fromObject({ minutes: 10 }).as("seconds"), // newStalePeriod
+    Duration.fromObject({ minutes: 10 }).as("seconds") // newStalePeriod
   );
 
   const assetList = [
@@ -487,7 +487,7 @@ const runScript = async () => {
       ],
       {
         initializer: "__Asset_init",
-      },
+      }
     )) as Asset;
     stackManager.setDeployment(asset.assetKey, assetToken.address);
 
@@ -516,7 +516,7 @@ const runScript = async () => {
         ],
         {
           initializer: "__Perpetual_init",
-        },
+        }
       )) as Perpetual;
       stackManager.setDeployment(asset.perpKey, perpContract.address);
 
@@ -528,7 +528,7 @@ const runScript = async () => {
      */
     await config.connect(deployer).setUint(
       formatBytes32String("ath" + asset.symbol), // key
-      expandTo18Decimals(0.0025), // value
+      expandTo18Decimals(0.0025) // value
     );
 
     /**
@@ -537,7 +537,7 @@ const runScript = async () => {
     await oracleRouter.connect(deployer).addChainlinkOracle(
       formatBytes32String("ath" + asset.symbol), // currencyKey
       stackManager.config.chainlinkAggregators[asset.symbol], // oracleAddress
-      false, // removeExisting
+      false // removeExisting
     );
   }
 
@@ -552,11 +552,11 @@ const runScript = async () => {
       ],
       {
         initializer: "__UniswapCheckpoints_init",
-      },
+      }
     )) as UniswapCheckpoints;
     stackManager.setDeployment(
       DeploymentKey.UniswapCheckpoints,
-      uniswapCheckpoints.address,
+      uniswapCheckpoints.address
     );
 
     const uniswapCheckpointer = (await upgrades.deployProxy(
@@ -566,11 +566,11 @@ const runScript = async () => {
       ],
       {
         initializer: "__UniswapCheckpointer_init",
-      },
+      }
     )) as UniswapCheckpointer;
     stackManager.setDeployment(
       DeploymentKey.UniswapCheckpointer,
-      uniswapCheckpointer.address,
+      uniswapCheckpointer.address
     );
 
     const athTwapOracle = (await upgrades.deployProxy(
@@ -585,11 +585,11 @@ const runScript = async () => {
       ],
       {
         initializer: "__UniswapTwapOracle_init",
-      },
+      }
     )) as UniswapTwapOracle;
     stackManager.setDeployment(
       DeploymentKey.AthTwapOracle,
-      athTwapOracle.address,
+      athTwapOracle.address
     );
 
     await oracleRouter
@@ -597,7 +597,7 @@ const runScript = async () => {
       .addUniswapTwapOracle(
         formatBytes32String("ATH"),
         athTwapOracle.address,
-        false,
+        false
       );
 
     await uniswapCheckpoints
@@ -607,7 +607,7 @@ const runScript = async () => {
       .connect(deployer)
       .grantRole(
         formatBytes32String("UPDATE_PRICE"),
-        stackManager.config.twapUpdater,
+        stackManager.config.twapUpdater
       );
     await athTwapOracle
       .connect(deployer)

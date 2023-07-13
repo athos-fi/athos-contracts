@@ -10,7 +10,7 @@ enum SignerType {
 }
 
 export async function selectSigner(
-  provider?: providers.Provider,
+  provider?: providers.Provider
 ): Promise<Signer> {
   switch (process.env.SIGNER_TYPE) {
     case SignerType.Ledger: {

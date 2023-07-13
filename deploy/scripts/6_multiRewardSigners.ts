@@ -10,7 +10,7 @@ const runScript = async () => {
 
   const RewardSystem = await ethers.getContractFactory(
     "RewardSystem",
-    deployer,
+    deployer
   );
 
   await upgrades.upgradeProxy(
@@ -19,11 +19,11 @@ const runScript = async () => {
     {
       // Manually checked and it's safe
       unsafeSkipStorageCheck: true,
-    },
+    }
   );
 
   const rewardSystem = RewardSystem.attach(
-    stackManager.getDeploymentChecked(DeploymentKey.RewardSystem).address,
+    stackManager.getDeploymentChecked(DeploymentKey.RewardSystem).address
   );
   await rewardSystem
     .connect(deployer)
