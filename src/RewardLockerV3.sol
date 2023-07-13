@@ -325,7 +325,7 @@ contract RewardLockerV3 is IRewardLocker, OwnableUpgradeable {
         return (params.amount1Left.sub(currentAmountTo1), params.amount2Left.sub(currentAmountTo2));
     }
 
-    function updateAirdropUnlockTime(uint256[] memory firstEntryIds, address[] memory users) 
+    function updateAirdropUnlockTime(uint256[] memory firstEntryIds, address[] memory users)
         external
         onlyUpdateUnlockTimeRole
     {
