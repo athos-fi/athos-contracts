@@ -339,10 +339,7 @@ contract RewardLockerV3 is IRewardLocker, OwnableUpgradeable {
         }
     }
 
-    function extendUnlockTime(uint256[] memory entryIds, address[] memory users)
-        external
-        onlyUpdateUnlockTimeRole
-    {
+    function extendUnlockTime(uint256[] memory entryIds, address[] memory users) external onlyUpdateUnlockTimeRole {
         require(entryIds.length == users.length, "RewardLocker: mismatch lengths");
         uint256 length = entryIds.length;
         for (uint256 i; i < length; i++) {
