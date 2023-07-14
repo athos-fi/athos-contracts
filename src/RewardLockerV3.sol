@@ -325,7 +325,7 @@ contract RewardLockerV3 is IRewardLocker, OwnableUpgradeable {
         return (params.amount1Left.sub(currentAmountTo1), params.amount2Left.sub(currentAmountTo2));
     }
 
-    function updateAirdropUnlockTime(uint256[] memory firstEntryIds, address[] memory users)
+    function extendAirdropUnlockTime(uint256[] memory firstEntryIds, address[] memory users)
         external
         onlyUpdateUnlockTimeRole
     {
@@ -336,6 +336,19 @@ contract RewardLockerV3 is IRewardLocker, OwnableUpgradeable {
                 uint256 unlockTime = rewardEntries[firstEntryIds[i] + j][users[i]].unlockTime;
                 rewardEntries[firstEntryIds[i] + j][users[i]].unlockTime = uint40(unlockTime + 52 weeks);
             }
+        }
+    }
+
+    function extendUnlockTime(uint256[] memory entryIds, address[] memory users)
+        external
+        onlyUpdateUnlockTimeRole
+    {
+        require(entryIds.length == users.length, "RewardLocker: mismatch lengths");
+        uint256 length = entryIds.length;
+        for (uint256 i; i < length; i++) {
+            uint256 unlockTime = rewardEntries[entryIds[i]][users[i]].unlockTime;
+            require(unlockTime != 0, "RewardLocker: invalid unlock time");
+            rewardEntries[entryIds[i]][users[i]].unlockTime = uint40(unlockTime + 52 weeks);
         }
     }
 }
