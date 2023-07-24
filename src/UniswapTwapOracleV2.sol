@@ -44,37 +44,6 @@ contract UniswapTwapOracleV2 is IUniswapTwapOracle, AccessControlUpgradeable {
         return latestPrice;
     }
 
-    function __UniswapTwapOracle_init(
-        IUniswapCheckpoints _checkpoints,
-        address[] calldata _priceRoute,
-        uint256 _minInterval,
-        uint256 _maxInterval,
-        uint256 _minPrice,
-        uint256 _maxPrice
-    ) public initializer {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
-        require(address(_checkpoints) != address(0), "UniswapTwapOracle: zero address");
-        require(_priceRoute.length > 1, "UniswapTwapOracle: price route too short");
-        require(_maxInterval >= _minInterval, "UniswapTwapOracle: invalid interval range");
-        require(_maxPrice >= _minPrice, "UniswapTwapOracle: invalid price range");
-
-        checkpoints = _checkpoints;
-        minInterval = _minInterval;
-        maxInterval = _maxInterval;
-        minPrice = _minPrice;
-        maxPrice = _maxPrice;
-
-        for (uint256 indToken = 0; indToken < _priceRoute.length; indToken++) {
-            priceRoute.push(_priceRoute[indToken]);
-            if (indToken > 0) {
-                quoteDecimals.push(IERC20MetadataUpgradeable(_priceRoute[indToken]).decimals());
-            }
-        }
-
-        emit PriceRangeUpdated(_minPrice, _maxPrice);
-    }
-
     function setPriceRange(uint256 _minPrice, uint256 _maxPrice) external onlyUpdatePriceRangeRole {
         require(_maxPrice >= _minPrice, "UniswapTwapOracle: invalid price range");
 
@@ -85,6 +54,8 @@ contract UniswapTwapOracleV2 is IUniswapTwapOracle, AccessControlUpgradeable {
     }
 
     function setPriceRoute(address[] calldata route) external onlyUpdatePriceRouteRole {
+        require(route.length > 1, "UniswapTwapOracle: price route too short");
+        require(route.length == priceRoute.length, "UniswapTwapOracle: price route length mis-match");
         priceRoute = route;
         emit PriceRouteUpdated(route);
     }
