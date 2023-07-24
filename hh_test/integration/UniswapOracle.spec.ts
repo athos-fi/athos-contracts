@@ -1,7 +1,7 @@
 import { Duration } from "luxon";
 import { expect, use } from "chai";
 import { ethers, upgrades, waffle } from "hardhat";
-import { ContractFactory } from "ethers";
+import { ContractFactory, Contract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
 import {
@@ -39,12 +39,13 @@ describe("Integration | UniswapOracle", function () {
 
   let athToken: AthToken,
     usdc: MockUSDC,
+    newUsdc: MockUSDC,
     weth: WETH9,
     uniswapFactory: IUniswapV2Factory,
     uniswapRouter: IUniswapV2Router02,
     uniswapCheckpoints: UniswapCheckpoints,
     uniswapCheckpointer: UniswapCheckpointer,
-    uniswapTwapOracle: UniswapTwapOracle,
+    uniswapTwapOracle: Contract,
     oracleRouter: OracleRouter;
 
   beforeEach(async function () {
@@ -84,6 +85,7 @@ describe("Integration | UniswapOracle", function () {
       },
     )) as AthToken;
     usdc = await MockUSDC.deploy();
+    newUsdc = await MockUSDC.deploy();
     weth = await WETH9.deploy();
 
     uniswapFactory = (await UniswapV2Factory.deploy(
@@ -111,7 +113,7 @@ describe("Integration | UniswapOracle", function () {
         initializer: "__UniswapCheckpointer_init",
       },
     )) as UniswapCheckpointer;
-    uniswapTwapOracle = (await upgrades.deployProxy(
+    uniswapTwapOracle = await upgrades.deployProxy(
       UniswapTwapOracle,
       [
         uniswapCheckpoints.address, // _checkpoints
@@ -124,7 +126,7 @@ describe("Integration | UniswapOracle", function () {
       {
         initializer: "__UniswapTwapOracle_init",
       },
-    )) as UniswapTwapOracle;
+    );
     oracleRouter = (await upgrades.deployProxy(OracleRouter, [], {
       initializer: "__OracleRouter_init",
     })) as OracleRouter;
@@ -146,6 +148,9 @@ describe("Integration | UniswapOracle", function () {
     await uniswapTwapOracle
       .connect(deployer)
       .grantRole(formatBytes32String("UPDATE_PRICE_RANGE"), deployer.address);
+    await uniswapTwapOracle
+      .connect(deployer)
+      .grantRole(formatBytes32String("UPDATE_PRICE_ROUTE"), deployer.address);
 
     await athToken.connect(deployer).approve(uniswapRouter.address, uint256Max);
     await usdc.connect(deployer).approve(uniswapRouter.address, uint256Max);
@@ -218,5 +223,20 @@ describe("Integration | UniswapOracle", function () {
     await expect(
       uniswapTwapOracle.connect(deployer).observePrice(),
     ).to.be.revertedWith("UniswapTwapOracle: price too high");
+  });
+
+  it("upgrade test", async () => {
+    const UniswapTwapOracleV2 = await ethers.getContractFactory(
+      "UniswapTwapOracleV2",
+    );
+    uniswapTwapOracle = await upgrades.upgradeProxy(
+      uniswapTwapOracle.address,
+      UniswapTwapOracleV2,
+    );
+    await uniswapTwapOracle
+      .connect(deployer)
+      .setPriceRoute([athToken.address, weth.address, newUsdc.address]);
+    const new_usdc_address = await uniswapTwapOracle.priceRoute(2);
+    expect(new_usdc_address).to.equal(newUsdc.address);
   });
 });
